@@ -143,7 +143,90 @@ Create a new product (Admin/Manager only).
 
 ---
 
+## Inventory
+
+### Adjust Inventory
+Manually adjust stock levels (add/remove) with a reason.
+
+*   **URL**: `/inventory/adjust`
+*   **Method**: `POST`
+*   **Auth Required**: Yes
+
+**Request Body:**
+```json
+{
+  "skuId": "cm...def",
+  "branchId": "cm...456",
+  "qty": 10, // Positive to add, negative to remove
+  "reason": "Restock"
+}
+```
+
+**Success Response (200 OK):**
+```json
+{
+  "id": "cm...stock1",
+  "skuId": "cm...def",
+  "branchId": "cm...456",
+  "qty": 100,
+  "lowStockThreshold": 10,
+  "updatedAt": "2025-12-26T12:00:00.000Z"
+}
+```
+
+### Inventory History
+Get stock movement history, optionally filtered by SKU and Branch.
+
+*   **URL**: `/inventory/history`
+*   **Method**: `GET`
+*   **Auth Required**: Yes
+*   **Query Parameters**:
+    *   `skuId` (optional)
+    *   `branchId` (optional)
+
+**Success Response (200 OK):**
+```json
+[
+  {
+    "id": "cm...move1",
+    "type": "ADJUSTMENT",
+    "qty": 10,
+    "reason": "Restock",
+    "createdAt": "2025-12-26T12:00:00.000Z",
+    "sku": { "name": "Sample Product Standard" },
+    "branch": { "name": "Main Branch" },
+    "user": { "name": "Admin User" }
+  }
+]
+```
+
+---
+
 ## Sales
+
+### Get Sales History
+Retrieve a list of past sales.
+
+*   **URL**: `/sales`
+*   **Method**: `GET`
+*   **Auth Required**: Yes
+*   **Query Parameters**:
+    *   `branchId` (optional): Filter by branch
+
+**Success Response (200 OK):**
+```json
+[
+  {
+    "id": "cm...sale1",
+    "total": 110,
+    "tax": 10,
+    "createdAt": "2025-12-25T12:05:00.000Z",
+    "items": [...],
+    "payments": [...],
+    "refunds": [...]
+  }
+]
+```
 
 ### Create Sale
 Process a new sale. This endpoint is transactional: it creates the sale record, records payments, and decrements stock. It supports idempotency via `clientSaleId`.
@@ -189,11 +272,53 @@ Process a new sale. This endpoint is transactional: it creates the sale record, 
 }
 ```
 
+### Refund Sale
+Refund a sale, either fully or partially. Restocks items and creates a refund record.
+
+*   **URL**: `/sales/:id/refund`
+*   **Method**: `POST`
+*   **Auth Required**: Yes
+    *   **Cashiers**: Can only refund same-day sales.
+    *   **Managers/Admins**: Can refund any sale.
+
+**Request Body (Partial Refund):**
+```json
+{
+  "items": [
+    {
+      "skuId": "cm...def",
+      "qty": 1
+    }
+  ],
+  "reason": "Customer returned item"
+}
+```
+
+**Request Body (Full Refund):**
+```json
+{
+  "reason": "Accidental charge"
+}
+```
+
+**Success Response (200 OK):**
+```json
+{
+  "id": "cm...refund1",
+  "saleId": "cm...sale1",
+  "amount": 110,
+  "reason": "Customer returned item",
+  "createdAt": "2025-12-26T14:00:00.000Z",
+  "items": [...]
+}
+```
+
 ---
 
 ## Error Responses
 
-*   **400 Bad Request**: Validation error (e.g., missing fields).
+*   **400 Bad Request**: Validation error (e.g., missing fields, invalid quantity).
 *   **401 Unauthorized**: Missing or invalid JWT token.
-*   **403 Forbidden**: User does not have the required role.
+*   **403 Forbidden**: User does not have the required role (e.g., cashier trying to refund old sale).
+*   **404 Not Found**: Resource not found (e.g., sale ID invalid).
 *   **500 Internal Server Error**: Unexpected server error.
