@@ -1,0 +1,123 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Branch {
+  id        String   @id @default(cuid())
+  name      String
+  address   String?
+  code      String   @unique
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  terminals Terminal[]
+  stocks    Stock[]
+  users     User[]
+}
+
+model Terminal {
+  id        String   @id @default(cuid())
+  branchId  String
+  name      String
+  active    Boolean  @default(true)
+  branch    Branch   @relation(fields: [branchId], references: [id])
+}
+
+model User {
+  id        String   @id @default(cuid())
+  email     String   @unique
+  password  String
+  name      String
+  role      Role     @default(CASHIER)
+  branchId  String?
+  branch    Branch?  @relation(fields: [branchId], references: [id])
+  createdAt DateTime @default(now())
+}
+
+enum Role {
+  ADMIN
+  MANAGER
+  CASHIER
+}
+
+model Product {
+  id          String   @id @default(cuid())
+  sku         String   @unique
+  name        String
+  description String?
+  price       Float
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  skus        SKU[]
+}
+
+model SKU {
+  id        String   @id @default(cuid())
+  productId String
+  barcode   String?  @unique
+  name      String?
+  createdAt DateTime @default(now())
+  product   Product  @relation(fields: [productId], references: [id])
+  stocks    Stock[]
+}
+
+model Stock {
+  id       String  @id @default(cuid())
+  skuId    String
+  branchId String
+  qty      Int     @default(0)
+  sku      SKU     @relation(fields: [skuId], references: [id])
+  branch   Branch  @relation(fields: [branchId], references: [id])
+  updatedAt DateTime @updatedAt
+}
+
+model Sale {
+  id           String    @id @default(cuid())
+  branchId     String
+  terminalId   String
+  cashierId    String
+  total        Float
+  tax          Float
+  createdAt    DateTime  @default(now())
+  items        SaleItem[]
+  payments     Payment[]
+}
+
+model SaleItem {
+  id        String  @id @default(cuid())
+  saleId    String
+  skuId     String
+  qty       Int
+  price     Float
+  discount  Float?  @default(0)
+  sale      Sale    @relation(fields: [saleId], references: [id])
+}
+
+model Payment {
+  id        String  @id @default(cuid())
+  saleId    String
+  method    String
+  amount    Float
+  provider  String?
+  sale      Sale    @relation(fields: [saleId], references: [id])
+}
+
+model Refund {
+  id        String  @id @default(cuid())
+  saleId    String
+  amount    Float
+  reason    String?
+  createdAt DateTime @default(now())
+}
+
+model AuditLog {
+  id        String  @id @default(cuid())
+  actorId   String?
+  action    String
+  meta      Json?
+  createdAt DateTime @default(now())
+}
