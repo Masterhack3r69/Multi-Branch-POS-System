@@ -2,6 +2,9 @@ import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-d
 import { Login } from '@/pages/Login';
 import { useAuthStore } from '@/store/authStore';
 import { POSTerminal } from '@/pages/POSTerminal';
+import { MainLayout } from '@/components/MainLayout';
+import { Inventory } from '@/pages/Inventory';
+import { SalesHistory } from '@/pages/SalesHistory';
 
 function PrivateRoute({ children }: { children: JSX.Element }) {
   const token = useAuthStore((state) => state.token);
@@ -17,10 +20,14 @@ function App() {
           path="/"
           element={
             <PrivateRoute>
-              <POSTerminal />
+              <MainLayout />
             </PrivateRoute>
           }
-        />
+        >
+          <Route index element={<POSTerminal />} />
+          <Route path="sales" element={<SalesHistory />} />
+          <Route path="inventory" element={<Inventory />} />
+        </Route>
       </Routes>
     </Router>
   );

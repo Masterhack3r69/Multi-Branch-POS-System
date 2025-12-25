@@ -17,6 +17,7 @@ model Branch {
   terminals Terminal[]
   stocks    Stock[]
   users     User[]
+  stockMovements StockMovement[]
 }
 
 model Terminal {
@@ -63,28 +64,60 @@ model SKU {
   createdAt DateTime @default(now())
   product   Product  @relation(fields: [productId], references: [id])
   stocks    Stock[]
+  stockMovements StockMovement[]
+  refundItems    RefundItem[]
 }
 
 model Stock {
-  id       String  @id @default(cuid())
-  skuId    String
-  branchId String
-  qty      Int     @default(0)
-  sku      SKU     @relation(fields: [skuId], references: [id])
-  branch   Branch  @relation(fields: [branchId], references: [id])
-  updatedAt DateTime @updatedAt
+  id                String   @id @default(cuid())
+  skuId             String
+  branchId          String
+  qty               Int      @default(0)
+  lowStockThreshold Int      @default(10)
+  sku               SKU      @relation(fields: [skuId], references: [id])
+  branch            Branch   @relation(fields: [branchId], references: [id])
+  updatedAt         DateTime @updatedAt
+  movements         StockMovement[]
+
+  @@unique([skuId, branchId])
+}
+
+model StockMovement {
+  id        String       @id @default(cuid())
+  stockId   String?
+  skuId     String
+  branchId  String
+  type      MovementType
+  qty       Int
+  reason    String?
+  createdAt DateTime     @default(now())
+  userId    String? // Who performed the action
+
+  stock  Stock? @relation(fields: [stockId], references: [id])
+  sku    SKU    @relation(fields: [skuId], references: [id])
+  branch Branch @relation(fields: [branchId], references: [id])
+}
+
+enum MovementType {
+  SALE
+  REFUND
+  ADJUSTMENT
+  SYNC
+  TRANSFER_IN
+  TRANSFER_OUT
 }
 
 model Sale {
-  id           String    @id @default(cuid())
-  branchId     String
-  terminalId   String
-  cashierId    String
-  total        Float
-  tax          Float
-  createdAt    DateTime  @default(now())
-  items        SaleItem[]
-  payments     Payment[]
+  id         String      @id @default(cuid())
+  branchId   String
+  terminalId String
+  cashierId  String
+  total      Float
+  tax        Float
+  createdAt  DateTime    @default(now())
+  items      SaleItem[]
+  payments   Payment[]
+  refunds    Refund[]
 }
 
 model SaleItem {
@@ -106,12 +139,25 @@ model Payment {
   sale      Sale    @relation(fields: [saleId], references: [id])
 }
 
+
 model Refund {
-  id        String  @id @default(cuid())
+  id        String       @id @default(cuid())
   saleId    String
   amount    Float
   reason    String?
-  createdAt DateTime @default(now())
+  createdAt DateTime     @default(now())
+  createdBy String // userId
+  sale      Sale         @relation(fields: [saleId], references: [id])
+  items     RefundItem[]
+}
+
+model RefundItem {
+  id       String @id @default(cuid())
+  refundId String
+  skuId    String
+  qty      Int
+  refund   Refund @relation(fields: [refundId], references: [id])
+  sku      SKU    @relation(fields: [skuId], references: [id])
 }
 
 model AuditLog {
