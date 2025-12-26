@@ -282,10 +282,22 @@ export const refundSale = async (req: Request, res: Response) => {
 
 export const getSales = async (req: Request, res: Response) => {
   try {
-    const { branchId } = req.query;
+    const { branchId, from, to, cashierId, terminalId } = req.query;
+    
+    const where: any = {};
+    if (branchId) where.branchId = String(branchId);
+    if (cashierId) where.cashierId = String(cashierId);
+    if (terminalId) where.terminalId = String(terminalId);
+    
+    if (from || to) {
+      where.createdAt = {};
+      if (from) where.createdAt.gte = new Date(String(from));
+      if (to) where.createdAt.lte = new Date(String(to));
+    }
+
     // TODO: Pagination
     const sales = await prisma.sale.findMany({
-      where: branchId ? { branchId: String(branchId) } : {},
+      where,
       include: {
         items: true,
         payments: true,

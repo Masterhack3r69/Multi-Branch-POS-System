@@ -8,15 +8,21 @@ export function SalesHistory() {
   const [selectedSale, setSelectedSale] = useState<any>(null);
   const [refundReason, setRefundReason] = useState('');
   const [message, setMessage] = useState('');
+  const [dateFrom, setDateFrom] = useState('');
+  const [dateTo, setDateTo] = useState('');
 
   useEffect(() => {
     loadSales();
-  }, []);
+  }, [dateFrom, dateTo]);
 
   const loadSales = async () => {
     try {
+      const params: any = { branchId: user?.branchId };
+      if (dateFrom) params.from = dateFrom;
+      if (dateTo) params.to = dateTo;
+
       const res = await api.get('/sales', {
-        params: { branchId: user?.branchId }
+        params
       });
       setSales(res.data);
     } catch (err) {
@@ -46,6 +52,27 @@ export function SalesHistory() {
     <div className="space-y-8">
       <h1 className="text-2xl font-bold">Sales History</h1>
       {message && <div className="p-2 mb-4 bg-blue-100 text-blue-700 rounded">{message}</div>}
+
+      <div className="bg-white p-4 rounded shadow mb-4 flex gap-4">
+        <div>
+          <label className="block text-sm font-medium">From</label>
+          <input 
+            type="date" 
+            className="border p-2 rounded"
+            value={dateFrom}
+            onChange={(e) => setDateFrom(e.target.value)}
+          />
+        </div>
+        <div>
+          <label className="block text-sm font-medium">To</label>
+          <input 
+            type="date" 
+            className="border p-2 rounded"
+            value={dateTo}
+            onChange={(e) => setDateTo(e.target.value)}
+          />
+        </div>
+      </div>
 
       <div className="bg-white p-6 rounded shadow overflow-x-auto">
         <table className="min-w-full text-left">

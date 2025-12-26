@@ -12,6 +12,7 @@ model Branch {
   name      String
   address   String?
   code      String   @unique
+  active    Boolean  @default(true)
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
   terminals Terminal[]
@@ -103,6 +104,7 @@ enum MovementType {
   REFUND
   ADJUSTMENT
   SYNC
+  SYNC_CORRECTION
   TRANSFER_IN
   TRANSFER_OUT
 }

@@ -5,13 +5,13 @@ import { z } from 'zod';
 const adjustStockSchema = z.object({
   skuId: z.string(),
   branchId: z.string(),
-  qty: z.number().int(), // Delta: +10 or -5
-  reason: z.string().min(1),
+  qtyChange: z.number().int(), // Delta: +10 or -5
+  reason: z.enum(['RESTOCK', 'DAMAGE', 'RECOUNT', 'TRANSFER', 'CORRECTION']),
 });
 
 export const adjustStock = async (req: Request, res: Response) => {
   try {
-    const { skuId, branchId, qty, reason } = adjustStockSchema.parse(req.body);
+    const { skuId, branchId, qtyChange, reason } = adjustStockSchema.parse(req.body);
     // TODO: Verify user is MANAGER or ADMIN (middleware should handle this, but we need user ID for log)
     // Assuming req.user is populated by auth middleware
     const userId = (req as any).user?.id;
@@ -29,10 +29,10 @@ export const adjustStock = async (req: Request, res: Response) => {
         create: {
           skuId,
           branchId,
-          qty: qty,
+          qty: qtyChange,
         },
         update: {
-          qty: { increment: qty },
+          qty: { increment: qtyChange },
         },
       });
 
@@ -43,7 +43,7 @@ export const adjustStock = async (req: Request, res: Response) => {
           skuId,
           branchId,
           type: 'ADJUSTMENT',
-          qty,
+          qty: qtyChange,
           reason,
           userId,
         },

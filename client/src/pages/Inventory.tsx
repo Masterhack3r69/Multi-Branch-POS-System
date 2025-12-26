@@ -45,12 +45,12 @@ export function Inventory() {
       await api.post('/inventory/adjust', {
         skuId: selectedSku,
         branchId: user?.branchId, // For MVP assume user works in one branch
-        qty: parseInt(adjustQty as any),
+        qtyChange: parseInt(adjustQty as any),
         reason: adjustReason
       });
       setMessage('Stock adjusted successfully');
       setAdjustQty(0);
-      setAdjustReason('');
+      setAdjustReason('RESTOCK');
       loadHistory();
     } catch (err: any) {
       setMessage('Error: ' + (err.response?.data?.message || err.message));
@@ -98,14 +98,19 @@ export function Inventory() {
             </div>
             <div className="flex-1">
               <label className="block text-sm font-medium">Reason</label>
-              <input 
-                type="text" 
+              <select
                 className="w-full border p-2 rounded"
                 value={adjustReason}
                 onChange={(e) => setAdjustReason(e.target.value)}
-                placeholder="Damage, recount, etc."
                 required
-              />
+              >
+                <option value="">Select Reason</option>
+                <option value="RESTOCK">Restock</option>
+                <option value="DAMAGE">Damage</option>
+                <option value="RECOUNT">Recount</option>
+                <option value="TRANSFER">Transfer</option>
+                <option value="CORRECTION">Correction</option>
+              </select>
             </div>
           </div>
           <button type="submit" className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700">

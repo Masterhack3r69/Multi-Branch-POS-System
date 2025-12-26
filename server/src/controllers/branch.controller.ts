@@ -8,6 +8,13 @@ const createBranchSchema = z.object({
   address: z.string().optional(),
 });
 
+const updateBranchSchema = z.object({
+  name: z.string().optional(),
+  code: z.string().optional(),
+  address: z.string().optional(),
+  active: z.boolean().optional(),
+});
+
 export const getBranches = async (req: Request, res: Response) => {
   try {
     const branches = await prisma.branch.findMany();
@@ -29,6 +36,36 @@ export const createBranch = async (req: Request, res: Response) => {
       return res.status(400).json({ errors: error.errors });
     }
     res.status(500).json({ message: 'Error creating branch' });
+  }
+};
+
+export const updateBranch = async (req: Request, res: Response) => {
+  try {
+    const { id } = req.params;
+    const data = updateBranchSchema.parse(req.body);
+    const branch = await prisma.branch.update({
+      where: { id },
+      data,
+    });
+    res.json(branch);
+  } catch (error) {
+    if (error instanceof z.ZodError) {
+      return res.status(400).json({ errors: error.errors });
+    }
+    res.status(500).json({ message: 'Error updating branch' });
+  }
+};
+
+export const disableBranch = async (req: Request, res: Response) => {
+  try {
+    const { id } = req.params;
+    const branch = await prisma.branch.update({
+      where: { id },
+      data: { active: false },
+    });
+    res.json(branch);
+  } catch (error) {
+    res.status(500).json({ message: 'Error disabling branch' });
   }
 };
 
