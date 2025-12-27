@@ -37,6 +37,7 @@ model User {
   role      Role     @default(CASHIER)
   branchId  String?
   branch    Branch?  @relation(fields: [branchId], references: [id])
+  active    Boolean  @default(true)
   createdAt DateTime @default(now())
 }
 
@@ -52,6 +53,7 @@ model Product {
   name        String
   description String?
   price       Float
+  active      Boolean  @default(true)
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
   skus        SKU[]
@@ -62,6 +64,7 @@ model SKU {
   productId String
   barcode   String?  @unique
   name      String?
+  active    Boolean  @default(true)
   createdAt DateTime @default(now())
   product   Product  @relation(fields: [productId], references: [id])
   stocks    Stock[]

@@ -5,6 +5,7 @@ import { POSTerminal } from '@/pages/POSTerminal';
 import { MainLayout } from '@/components/MainLayout';
 import { Inventory } from '@/pages/Inventory';
 import { SalesHistory } from '@/pages/SalesHistory';
+import { Users } from '@/pages/Users';
 
 function PrivateRoute({ children }: { children: JSX.Element }) {
   const token = useAuthStore((state) => state.token);
@@ -27,6 +28,7 @@ function App() {
           <Route index element={<POSTerminal />} />
           <Route path="sales" element={<SalesHistory />} />
           <Route path="inventory" element={<Inventory />} />
+          <Route path="users" element={<Users />} />
         </Route>
       </Routes>
     </Router>
