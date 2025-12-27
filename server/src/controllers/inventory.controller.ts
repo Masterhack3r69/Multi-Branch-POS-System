@@ -65,17 +65,23 @@ export const adjustStock = async (req: Request, res: Response) => {
 export const getStockHistory = async (req: Request, res: Response) => {
   try {
     const { skuId, branchId } = req.query;
+    const user = (req as any).user;
 
     const where: any = {};
     if (skuId) where.skuId = String(skuId);
-    if (branchId) where.branchId = String(branchId);
+    
+    // RBAC: If not Admin, enforce user's branch
+    if (user.role !== 'ADMIN' && user.branchId) {
+       where.branchId = user.branchId;
+    } else if (branchId) {
+       where.branchId = String(branchId);
+    }
 
     const history = await prisma.stockMovement.findMany({
       where,
       include: {
         sku: { include: { product: true } },
         branch: true,
-        // user: true, // if we want user details
       },
       orderBy: { createdAt: 'desc' },
       take: 100, // Limit for MVP
@@ -85,5 +91,65 @@ export const getStockHistory = async (req: Request, res: Response) => {
   } catch (error) {
     console.error(error);
     res.status(500).json({ message: 'Error fetching stock history' });
+  }
+};
+
+export const getLowStock = async (req: Request, res: Response) => {
+  try {
+    const { branchId } = req.query;
+    const user = (req as any).user;
+    
+    const where: any = {};
+
+    if (user.role !== 'ADMIN' && user.branchId) {
+        where.branchId = user.branchId;
+    } else if (branchId) {
+        where.branchId = String(branchId);
+    }
+
+    const stocks = await prisma.stock.findMany({
+      where,
+      include: {
+        sku: { include: { product: true } },
+        branch: true
+      }
+    });
+
+    const lowStockItems = stocks.filter(s => s.qty <= s.lowStockThreshold);
+
+    res.json(lowStockItems);
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ message: 'Error fetching low stock items' });
+  }
+};
+
+// Also adding a geneirc "Get Stock Levels" to show current status in UI
+export const getStockLevels = async (req: Request, res: Response) => {
+  try {
+    const { branchId } = req.query;
+    const user = (req as any).user;
+    
+    const where: any = {};
+    
+    if (user.role !== 'ADMIN' && user.branchId) {
+        where.branchId = user.branchId;
+    } else if (branchId) {
+        where.branchId = String(branchId);
+    }
+
+    const stocks = await prisma.stock.findMany({
+      where,
+      include: {
+        sku: { include: { product: true } },
+        branch: true
+      },
+      orderBy: { sku: { name: 'asc' } }
+    });
+
+    res.json(stocks);
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ message: 'Error fetching stock levels' });
   }
 };

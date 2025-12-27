@@ -5,13 +5,15 @@ Base URL: `http://localhost:3000/api`
 ## Authentication
 
 ### Login
+
 Authenticates a user and returns a JWT token.
 
-*   **URL**: `/auth/login`
-*   **Method**: `POST`
-*   **Auth Required**: No
+- **URL**: `/auth/login`
+- **Method**: `POST`
+- **Auth Required**: No
 
 **Request Body:**
+
 ```json
 {
   "email": "admin@example.com",
@@ -20,6 +22,7 @@ Authenticates a user and returns a JWT token.
 ```
 
 **Success Response (200 OK):**
+
 ```json
 {
   "token": "eyJhbGciOiJIUzI1NiIsIn...",
@@ -37,13 +40,15 @@ Authenticates a user and returns a JWT token.
 ## Branches
 
 ### List Branches
+
 Get a list of all branches.
 
-*   **URL**: `/branches`
-*   **Method**: `GET`
-*   **Auth Required**: Yes
+- **URL**: `/branches`
+- **Method**: `GET`
+- **Auth Required**: Yes
 
 **Success Response (200 OK):**
+
 ```json
 [
   {
@@ -58,13 +63,15 @@ Get a list of all branches.
 ```
 
 ### Create Branch
+
 Create a new branch (Admin only).
 
-*   **URL**: `/branches`
-*   **Method**: `POST`
-*   **Auth Required**: Yes (Role: ADMIN)
+- **URL**: `/branches`
+- **Method**: `POST`
+- **Auth Required**: Yes (Role: ADMIN)
 
 **Request Body:**
+
 ```json
 {
   "name": "Downtown Branch",
@@ -74,13 +81,15 @@ Create a new branch (Admin only).
 ```
 
 ### List Branch Terminals
+
 Get all terminals associated with a specific branch.
 
-*   **URL**: `/branches/:id/terminals`
-*   **Method**: `GET`
-*   **Auth Required**: Yes
+- **URL**: `/branches/:id/terminals`
+- **Method**: `GET`
+- **Auth Required**: Yes
 
 **Success Response (200 OK):**
+
 ```json
 [
   {
@@ -97,13 +106,15 @@ Get all terminals associated with a specific branch.
 ## Products
 
 ### List Products
+
 Get a list of all products including their SKUs.
 
-*   **URL**: `/products`
-*   **Method**: `GET`
-*   **Auth Required**: Yes
+- **URL**: `/products`
+- **Method**: `GET`
+- **Auth Required**: Yes
 
 **Success Response (200 OK):**
+
 ```json
 [
   {
@@ -125,13 +136,15 @@ Get a list of all products including their SKUs.
 ```
 
 ### Create Product
+
 Create a new product (Admin/Manager only).
 
-*   **URL**: `/products`
-*   **Method**: `POST`
-*   **Auth Required**: Yes (Role: ADMIN, MANAGER)
+- **URL**: `/products`
+- **Method**: `POST`
+- **Auth Required**: Yes (Role: ADMIN, MANAGER)
 
 **Request Body:**
+
 ```json
 {
   "sku": "PROD-002",
@@ -146,13 +159,15 @@ Create a new product (Admin/Manager only).
 ## Inventory
 
 ### Adjust Inventory
+
 Manually adjust stock levels (add/remove) with a reason.
 
-*   **URL**: `/inventory/adjust`
-*   **Method**: `POST`
-*   **Auth Required**: Yes
+- **URL**: `/inventory/adjust`
+- **Method**: `POST`
+- **Auth Required**: Yes
 
 **Request Body:**
+
 ```json
 {
   "skuId": "cm...def",
@@ -163,6 +178,7 @@ Manually adjust stock levels (add/remove) with a reason.
 ```
 
 **Success Response (200 OK):**
+
 ```json
 {
   "id": "cm...stock1",
@@ -174,17 +190,37 @@ Manually adjust stock levels (add/remove) with a reason.
 }
 ```
 
+### Get Low Stock
+
+Get items where quantity is below threshold.
+
+- **URL**: `/inventory/low-stock`
+- **Method**: `GET`
+- **Auth Required**: Yes
+- **Query Parameters**: `branchId` (optional)
+
+### Get Stock Levels
+
+Get current stock of all items.
+
+- **URL**: `/inventory/levels`
+- **Method**: `GET`
+- **Auth Required**: Yes
+- **Query Parameters**: `branchId` (optional)
+
 ### Inventory History
+
 Get stock movement history, optionally filtered by SKU and Branch.
 
-*   **URL**: `/inventory/history`
-*   **Method**: `GET`
-*   **Auth Required**: Yes
-*   **Query Parameters**:
-    *   `skuId` (optional)
-    *   `branchId` (optional)
+- **URL**: `/inventory/history`
+- **Method**: `GET`
+- **Auth Required**: Yes
+- **Query Parameters**:
+  - `skuId` (optional)
+  - `branchId` (optional)
 
 **Success Response (200 OK):**
+
 ```json
 [
   {
@@ -205,15 +241,17 @@ Get stock movement history, optionally filtered by SKU and Branch.
 ## Sales
 
 ### Get Sales History
+
 Retrieve a list of past sales.
 
-*   **URL**: `/sales`
-*   **Method**: `GET`
-*   **Auth Required**: Yes
-*   **Query Parameters**:
-    *   `branchId` (optional): Filter by branch
+- **URL**: `/sales`
+- **Method**: `GET`
+- **Auth Required**: Yes
+- **Query Parameters**:
+  - `branchId` (optional): Filter by branch
 
 **Success Response (200 OK):**
+
 ```json
 [
   {
@@ -229,16 +267,18 @@ Retrieve a list of past sales.
 ```
 
 ### Create Sale
+
 Process a new sale. This endpoint is transactional: it creates the sale record, records payments, and decrements stock. It supports idempotency via `clientSaleId`.
 
-*   **URL**: `/sales`
-*   **Method**: `POST`
-*   **Auth Required**: Yes
+- **URL**: `/sales`
+- **Method**: `POST`
+- **Auth Required**: Yes
 
 **Request Body:**
+
 ```json
 {
-  "clientSaleId": "uuid-v4-from-client", 
+  "clientSaleId": "uuid-v4-from-client",
   "branchId": "cm...456",
   "terminalId": "cm...789",
   "cashierId": "cm...123",
@@ -260,6 +300,7 @@ Process a new sale. This endpoint is transactional: it creates the sale record, 
 ```
 
 **Success Response (200 OK):**
+
 ```json
 {
   "id": "cm...sale1",
@@ -273,15 +314,17 @@ Process a new sale. This endpoint is transactional: it creates the sale record, 
 ```
 
 ### Refund Sale
+
 Refund a sale, either fully or partially. Restocks items and creates a refund record.
 
-*   **URL**: `/sales/:id/refund`
-*   **Method**: `POST`
-*   **Auth Required**: Yes
-    *   **Cashiers**: Can only refund same-day sales.
-    *   **Managers/Admins**: Can refund any sale.
+- **URL**: `/sales/:id/refund`
+- **Method**: `POST`
+- **Auth Required**: Yes
+  - **Cashiers**: Can only refund same-day sales.
+  - **Managers/Admins**: Can refund any sale.
 
 **Request Body (Partial Refund):**
+
 ```json
 {
   "items": [
@@ -295,6 +338,7 @@ Refund a sale, either fully or partially. Restocks items and creates a refund re
 ```
 
 **Request Body (Full Refund):**
+
 ```json
 {
   "reason": "Accidental charge"
@@ -302,6 +346,7 @@ Refund a sale, either fully or partially. Restocks items and creates a refund re
 ```
 
 **Success Response (200 OK):**
+
 ```json
 {
   "id": "cm...refund1",
@@ -317,8 +362,8 @@ Refund a sale, either fully or partially. Restocks items and creates a refund re
 
 ## Error Responses
 
-*   **400 Bad Request**: Validation error (e.g., missing fields, invalid quantity).
-*   **401 Unauthorized**: Missing or invalid JWT token.
-*   **403 Forbidden**: User does not have the required role (e.g., cashier trying to refund old sale).
-*   **404 Not Found**: Resource not found (e.g., sale ID invalid).
-*   **500 Internal Server Error**: Unexpected server error.
+- **400 Bad Request**: Validation error (e.g., missing fields, invalid quantity).
+- **401 Unauthorized**: Missing or invalid JWT token.
+- **403 Forbidden**: User does not have the required role (e.g., cashier trying to refund old sale).
+- **404 Not Found**: Resource not found (e.g., sale ID invalid).
+- **500 Internal Server Error**: Unexpected server error.

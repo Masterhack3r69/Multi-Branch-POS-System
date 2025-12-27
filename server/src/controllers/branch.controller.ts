@@ -28,7 +28,15 @@ export const createBranch = async (req: Request, res: Response) => {
   try {
     const data = createBranchSchema.parse(req.body);
     const branch = await prisma.branch.create({
-      data,
+      data: {
+        ...data,
+        terminals: {
+          create: {
+            name: `${data.code}-POS-01`
+          }
+        }
+      },
+      include: { terminals: true }
     });
     res.json(branch);
   } catch (error) {

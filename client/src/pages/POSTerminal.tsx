@@ -20,6 +20,7 @@ interface CartItem {
 export function POSTerminal() {
   const { user, logout } = useAuthStore();
   const [products, setProducts] = useState<Product[]>([]);
+  const [stockMap, setStockMap] = useState<Record<string, number>>({});
   const [cart, setCart] = useState<CartItem[]>([]);
   const [search, setSearch] = useState('');
   const [loading, setLoading] = useState(false);
@@ -34,23 +35,33 @@ export function POSTerminal() {
     window.addEventListener('online', () => setOnline(true));
     window.addEventListener('offline', () => setOnline(false));
     
-    fetchContext();
-    fetchProducts();
-    syncPendingSales();
-
+    fetchContext(); // This sets branchId
+    
     return () => {
         window.removeEventListener('online', () => setOnline(true));
         window.removeEventListener('offline', () => setOnline(false));
     };
   }, [online]);
 
+  useEffect(() => {
+    if (branchId) {
+        fetchProducts();
+        fetchStock();
+        syncPendingSales();
+    }
+  }, [branchId, online]);
+
   const fetchContext = async () => {
     try {
       if (online) {
           const bRes = await api.get('/branches');
           if (bRes.data.length > 0) {
-            setBranchId(bRes.data[0].id);
-            const tRes = await api.get(`/branches/${bRes.data[0].id}/terminals`);
+            // Priority: User's assigned branch -> First available branch
+            // In a real app, we'd persist the selected terminal/branch in local storage
+            const targetBranch = user?.branchId || bRes.data[0].id;
+            setBranchId(targetBranch);
+            
+            const tRes = await api.get(`/branches/${targetBranch}/terminals`);
             if (tRes.data.length > 0) setTerminalId(tRes.data[0].id);
           }
       }
@@ -76,6 +87,20 @@ export function POSTerminal() {
     }
   };
   
+  const fetchStock = async () => {
+      if (!online || !branchId) return;
+      try {
+          const res = await api.get('/inventory/levels', { params: { branchId } });
+          const map: Record<string, number> = {};
+          res.data.forEach((s: any) => {
+              map[s.skuId] = s.qty;
+          });
+          setStockMap(map);
+      } catch (e) {
+          console.error('Error fetching stock', e);
+      }
+  };
+
   const syncPendingSales = async () => {
       if (!online) return;
       const pending = await db.getPendingSales();
@@ -93,6 +118,7 @@ export function POSTerminal() {
           }
       }
       console.log('Sync complete');
+      fetchStock(); // Refresh stock after sync
   };
 
   const addToCart = (product: Product) => {
@@ -128,6 +154,7 @@ export function POSTerminal() {
       if (online) {
           await api.post('/sales', saleData);
           alert('Sale completed!');
+          fetchStock(); // Refresh stock immediately
       } else {
           await db.queueSale(saleData);
           alert('Sale queued (Offline)');
@@ -153,7 +180,12 @@ export function POSTerminal() {
       <div className="flex-1 p-4 overflow-auto">
         <div className="flex justify-between mb-4">
             <h1 className="text-2xl font-bold">POS - {user?.name}</h1>
-            <button onClick={logout} className="text-red-500">Logout</button>
+            <div className="space-x-4">
+                 <span className={`px-2 py-1 rounded text-xs ${online ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}`}>
+                    {online ? 'Online' : 'Offline'}
+                 </span>
+                 <button onClick={logout} className="text-red-500">Logout</button>
+            </div>
         </div>
         
         <input
@@ -164,16 +196,27 @@ export function POSTerminal() {
         />
         
         <div className="grid grid-cols-3 gap-4">
-          {filteredProducts.map((p) => (
-            <div
-              key={p.id}
-              onClick={() => addToCart(p)}
-              className="p-4 bg-white rounded shadow cursor-pointer hover:bg-blue-50"
-            >
-              <h3 className="font-bold">{p.name}</h3>
-              <p className="text-gray-600">${p.price.toFixed(2)}</p>
-            </div>
-          ))}
+          {filteredProducts.map((p) => {
+            const skuId = p.skus[0]?.id;
+            const stockQty = stockMap[skuId] ?? 0; // Default to 0 if unknown
+            const hasStock = stockQty > 0;
+
+            return (
+              <div
+                key={p.id}
+                onClick={() => addToCart(p)}
+                className={`p-4 bg-white rounded shadow cursor-pointer hover:bg-blue-50 relative border-l-4 ${hasStock ? 'border-green-500' : 'border-red-500'}`}
+              >
+                <div className="flex justify-between items-start">
+                    <h3 className="font-bold">{p.name}</h3>
+                    <span className={`text-xs font-bold px-2 py-1 rounded ${hasStock ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}`}>
+                        {stockQty} left
+                    </span>
+                </div>
+                <p className="text-gray-600">${p.price.toFixed(2)}</p>
+              </div>
+            );
+          })}
         </div>
       </div>
 
