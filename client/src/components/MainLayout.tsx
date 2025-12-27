@@ -16,7 +16,10 @@ export function MainLayout() {
               <Link to="/inventory" className="hover:underline">Inventory</Link>
             )}
             {user?.role === 'ADMIN' && (
-              <Link to="/users" className="hover:underline">Users</Link>
+              <>
+                <Link to="/users" className="hover:underline">Users</Link>
+                <Link to="/branches" className="hover:underline">Branches</Link>
+              </>
             )}
             <button onClick={logout} className="bg-red-500 px-3 py-1 rounded hover:bg-red-600">Logout</button>
           </div>

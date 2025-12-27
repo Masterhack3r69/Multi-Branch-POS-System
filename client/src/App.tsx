@@ -6,6 +6,7 @@ import { MainLayout } from '@/components/MainLayout';
 import { Inventory } from '@/pages/Inventory';
 import { SalesHistory } from '@/pages/SalesHistory';
 import { Users } from '@/pages/Users';
+import { Branches } from '@/pages/Branches';
 
 function PrivateRoute({ children }: { children: JSX.Element }) {
   const token = useAuthStore((state) => state.token);
@@ -29,6 +30,7 @@ function App() {
           <Route path="sales" element={<SalesHistory />} />
           <Route path="inventory" element={<Inventory />} />
           <Route path="users" element={<Users />} />
+          <Route path="branches" element={<Branches />} />
         </Route>
       </Routes>
     </Router>
