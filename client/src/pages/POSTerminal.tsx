@@ -181,82 +181,96 @@ export function POSTerminal() {
   const total = cart.reduce((sum, item) => sum + item.price * item.qty, 0);
 
   return (
-    <div className="flex h-screen bg-gray-100">
-      {/* Sidebar / Products */}
-      <div className="flex-1 p-4 overflow-auto">
-        <div className="flex justify-between mb-4">
-            <h1 className="text-2xl font-bold">POS - {user?.name}</h1>
-            <div className="space-x-4">
-                 <span className={`px-2 py-1 rounded text-xs ${online ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}`}>
-                    {online ? 'Online' : 'Offline'}
+    <div className="flex h-[calc(100vh-theme(spacing.16))] gap-6">
+      {/* Products Grid */}
+      <div className="flex-1 flex flex-col min-h-0">
+        <div className="flex justify-between items-center mb-6">
+            <h1 className="text-2xl font-black uppercase tracking-tighter">Terminal</h1>
+             <div className="flex items-center gap-4">
+                 <span className={`px-2 py-1 text-xs font-bold uppercase border border-black ${online ? 'bg-green-600 text-white' : 'bg-red-600 text-white'}`}>
+                    {online ? 'System Online' : 'System Offline'}
                  </span>
-                 <button onClick={logout} className="text-red-500">Logout</button>
             </div>
         </div>
         
-        <input
-          className="w-full p-2 mb-4 border rounded"
-          placeholder="Search products..."
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-        />
+        <div className="mb-6">
+            <input
+            className="w-full bg-zinc-50 border-2 border-black p-4 text-sm font-bold uppercase placeholder-zinc-400 focus:outline-none focus:bg-white transition-colors"
+            placeholder="SEARCH SKU / PRODUCT NAME..."
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            />
+        </div>
         
-        <div className="grid grid-cols-3 gap-4">
+        <div className="grid grid-cols-3 gap-4 overflow-y-auto pr-2 pb-2">
           {filteredProducts.map((p) => {
             const skuId = p.skus[0]?.id;
-            const stockQty = stockMap[skuId] ?? 0; // Default to 0 if unknown
+            const stockQty = stockMap[skuId] ?? 0;
             const hasStock = stockQty > 0;
 
             return (
               <div
                 key={p.id}
                 onClick={() => addToCart(p)}
-                className={`p-4 bg-white rounded shadow cursor-pointer hover:bg-blue-50 relative border-l-4 ${hasStock ? 'border-green-500' : 'border-red-500'}`}
+                className="group border-2 border-black bg-white p-4 cursor-pointer hover:bg-black hover:text-white transition-all active:translate-y-1"
               >
-                <div className="flex justify-between items-start">
-                    <h3 className="font-bold">{p.name}</h3>
-                    <span className={`text-xs font-bold px-2 py-1 rounded ${hasStock ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}`}>
-                        {stockQty} left
+                <div className="flex justify-between items-start mb-2">
+                    <h3 className="font-bold uppercase text-sm leading-tight">{p.name}</h3>
+                    <span className={`text-[10px] font-bold px-1 py-0.5 border ${hasStock ? 'border-green-600 text-green-600 group-hover:border-white group-hover:text-white' : 'border-red-600 text-red-600 group-hover:border-white group-hover:text-white'}`}>
+                        {stockQty}
                     </span>
                 </div>
-                <p className="text-gray-600">${p.price.toFixed(2)}</p>
+                <p className="font-mono text-lg font-bold">${p.price.toFixed(2)}</p>
               </div>
             );
           })}
         </div>
       </div>
 
-      {/* Cart */}
-      <div className="flex flex-col w-1/3 p-4 bg-white shadow-l">
-        <h2 className="mb-4 text-xl font-bold">Current Sale</h2>
-        <div className="flex-1 overflow-auto">
+      {/* Cart Section */}
+      <div className="w-1/3 flex flex-col border-2 border-black bg-white h-full">
+        <div className="p-4 border-b-2 border-black bg-zinc-50">
+            <h2 className="font-black uppercase tracking-tight flex justify-between items-center">
+                Current Sale
+                <span className="text-xs font-mono bg-black text-white px-2 py-1">{cart.length} ITEMS</span>
+            </h2>
+        </div>
+
+        <div className="flex-1 overflow-auto p-4 space-y-2">
           {cart.map((item) => (
-            <div key={item.skuId} className="flex justify-between py-2 border-b">
+            <div key={item.skuId} className="flex justify-between items-center p-3 border border-black bg-zinc-50 group hover:bg-zinc-100">
               <div>
-                <div className="font-medium">{item.name}</div>
-                <div className="text-sm text-gray-500">${item.price} x {item.qty}</div>
+                <div className="font-bold text-sm uppercase">{item.name}</div>
+                <div className="text-xs font-mono text-zinc-500 group-hover:text-zinc-700">
+                    ${item.price} x {item.qty}
+                </div>
               </div>
-              <div className="font-bold">${(item.price * item.qty).toFixed(2)}</div>
+              <div className="font-mono font-bold">${(item.price * item.qty).toFixed(2)}</div>
             </div>
           ))}
+          {cart.length === 0 && (
+              <div className="text-center text-zinc-400 text-xs font-bold uppercase mt-10">
+                  Cart is empty
+              </div>
+          )}
         </div>
         
-        <div className="pt-4 mt-4 border-t">
-          <div className="flex justify-between mb-2 text-xl font-bold">
+        <div className="p-4 border-t-2 border-black bg-zinc-50">
+          <div className="flex justify-between mb-4 text-xl font-black uppercase tracking-tighter">
             <span>Total</span>
-            <span>${total.toFixed(2)}</span>
+            <span className="font-mono">${total.toFixed(2)}</span>
           </div>
           <button
             onClick={checkout}
             disabled={cart.length === 0 || loading}
-            className="w-full py-3 text-white bg-green-600 rounded disabled:bg-gray-400 hover:bg-green-700"
+            className="w-full py-4 bg-black text-white font-black uppercase tracking-widest hover:bg-zinc-800 disabled:bg-zinc-300 disabled:cursor-not-allowed transition-colors"
           >
-            {loading ? 'Processing...' : 'Checkout (Cash)'}
+            {loading ? 'PROCESSING...' : 'COMPLETE SALE'}
           </button>
         </div>
       </div>
-      {/* Cash Session Enforcement */}
-      {/* Wait for branch/terminal selection before forcing session */}
+
+      {/* Session Modals */}
       {!sessionActive && branchId && terminalId && (
           <CashSessionModal 
             branchId={branchId}
@@ -270,7 +284,7 @@ export function POSTerminal() {
           <CloseSessionModal 
             onClosed={() => {
                 setShowCloseSession(false);
-                setSessionActive(false); // Force re-check -> triggers open drawer modal
+                setSessionActive(false); 
             }}
             onCancel={() => setShowCloseSession(false)}
           />

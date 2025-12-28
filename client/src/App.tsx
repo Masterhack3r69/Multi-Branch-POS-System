@@ -10,6 +10,7 @@ import { Branches } from '@/pages/Branches';
 
 import { Products } from '@/pages/Products';
 
+
 function PrivateRoute({ children }: { children: JSX.Element }) {
   const token = useAuthStore((state) => state.token);
   return token ? children : <Navigate to="/login" />;

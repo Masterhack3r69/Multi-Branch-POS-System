@@ -22,38 +22,54 @@ export function Login() {
   };
 
   return (
-    <div className="flex items-center justify-center min-h-screen bg-gray-100">
-      <div className="p-8 bg-white rounded shadow-md w-96">
-        <h2 className="mb-6 text-2xl font-bold text-center">Login</h2>
-        {error && <div className="p-2 mb-4 text-red-700 bg-red-100 rounded">{error}</div>}
-        <form onSubmit={handleSubmit}>
-          <div className="mb-4">
-            <label className="block mb-2 text-sm font-bold text-gray-700">Email</label>
+    <div className="min-h-screen bg-black flex flex-col items-center justify-center p-4">
+      <div className="w-full max-w-sm">
+        <div className="mb-12 text-center">
+            <h1 className="text-5xl font-mono text-white tracking-tighter mb-2">POS.</h1>
+            <p className="text-zinc-500 text-sm tracking-widest uppercase">System Access</p>
+        </div>
+
+        {error && (
+          <div className="mb-6 p-4 bg-red-900/20 border-l-2 border-red-600 text-red-500 text-sm font-mono">
+            ERROR: {error}
+          </div>
+        )}
+
+        <form onSubmit={handleSubmit} className="space-y-6">
+          <div className="space-y-1">
+            <label className="block text-xs font-medium text-zinc-400 uppercase tracking-wider">Email Address</label>
             <input
               type="email"
-              className="w-full px-3 py-2 border rounded shadow-sm focus:outline-none focus:border-blue-500"
+              className="block w-full bg-zinc-900 border-l-2 border-zinc-700 text-white py-4 px-4 placeholder-zinc-600 focus:outline-none focus:border-white transition-colors"
+              placeholder="user@domain.com"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               required
             />
           </div>
-          <div className="mb-6">
-            <label className="block mb-2 text-sm font-bold text-gray-700">Password</label>
+
+          <div className="space-y-1">
+            <label className="block text-xs font-medium text-zinc-400 uppercase tracking-wider">Password</label>
             <input
               type="password"
-              className="w-full px-3 py-2 border rounded shadow-sm focus:outline-none focus:border-blue-500"
+              className="block w-full bg-zinc-900 border-l-2 border-zinc-700 text-white py-4 px-4 placeholder-zinc-600 focus:outline-none focus:border-white transition-colors"
+              placeholder="••••••••••"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               required
             />
           </div>
+
           <button
             type="submit"
-            className="w-full px-4 py-2 font-bold text-white bg-blue-500 rounded hover:bg-blue-700 focus:outline-none"
+            className="w-full bg-white text-black font-bold py-4 uppercase tracking-widest hover:bg-zinc-200 transition-colors mt-8"
           >
-            Sign In
+            Enter System
           </button>
         </form>
+         <div className="mt-12 text-center text-xs text-zinc-800 uppercase tracking-widest">
+             System v1.0.0
+          </div>
       </div>
     </div>
   );
