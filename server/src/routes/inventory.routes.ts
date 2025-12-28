@@ -6,7 +6,7 @@ const router = Router();
 
 router.post('/adjust', authenticate, authorize(['MANAGER', 'ADMIN']), adjustStock);
 router.get('/history', authenticate, authorize(['MANAGER', 'ADMIN']), getStockHistory);
-router.get('/low-stock', authenticate, authorize(['MANAGER', 'ADMIN']), getLowStock);
+router.get('/low-stock', authenticate, authorize(['MANAGER', 'ADMIN', 'CASHIER']), getLowStock);
 router.get('/levels', authenticate, authorize(['MANAGER', 'ADMIN', 'CASHIER']), getStockLevels);
 
 export default router;

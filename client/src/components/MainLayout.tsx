@@ -12,8 +12,11 @@ export function MainLayout() {
           <div className="space-x-4">
             <Link to="/" className="hover:underline">POS Terminal</Link>
             <Link to="/sales" className="hover:underline">Sales History</Link>
-            {(user?.role === 'MANAGER' || user?.role === 'ADMIN') && (
-              <Link to="/inventory" className="hover:underline">Inventory</Link>
+            {['ADMIN', 'MANAGER'].includes(user?.role || '') && (
+              <>
+                <Link to="/products" className="hover:underline">Products</Link>
+                <Link to="/inventory" className="hover:underline">Inventory</Link>
+              </>
             )}
             {user?.role === 'ADMIN' && (
               <>

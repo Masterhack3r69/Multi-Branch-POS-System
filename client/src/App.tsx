@@ -8,6 +8,8 @@ import { SalesHistory } from '@/pages/SalesHistory';
 import { Users } from '@/pages/Users';
 import { Branches } from '@/pages/Branches';
 
+import { Products } from '@/pages/Products';
+
 function PrivateRoute({ children }: { children: JSX.Element }) {
   const token = useAuthStore((state) => state.token);
   return token ? children : <Navigate to="/login" />;
@@ -28,6 +30,7 @@ function App() {
         >
           <Route index element={<POSTerminal />} />
           <Route path="sales" element={<SalesHistory />} />
+          <Route path="products" element={<Products />} />
           <Route path="inventory" element={<Inventory />} />
           <Route path="users" element={<Users />} />
           <Route path="branches" element={<Branches />} />

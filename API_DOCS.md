@@ -366,4 +366,64 @@ Refund a sale, either fully or partially. Restocks items and creates a refund re
 - **401 Unauthorized**: Missing or invalid JWT token.
 - **403 Forbidden**: User does not have the required role (e.g., cashier trying to refund old sale).
 - **404 Not Found**: Resource not found (e.g., sale ID invalid).
-- **500 Internal Server Error**: Unexpected server error.
+
+---
+
+## Cash Management
+
+### Get Active Session
+
+Get the current active cash session for the user.
+
+- **URL**: `/cash/session`
+- **Method**: `GET`
+- **Auth Required**: Yes
+
+### Start Session
+
+Open the cash drawer with a starting float.
+
+- **URL**: `/cash/session/start`
+- **Method**: `POST`
+- **Auth Required**: Yes
+  **Request Body:**
+
+```json
+{
+  "branchId": "branch-uuid",
+  "terminalId": "terminal-uuid",
+  "startAmount": 100.0
+}
+```
+
+### End Session
+
+Close the cash drawer and record actual ending cash.
+
+- **URL**: `/cash/session/end`
+- **Method**: `POST`
+- **Auth Required**: Yes
+  **Request Body:**
+
+```json
+{
+  "endAmount": 520.5
+}
+```
+
+### Add Transaction
+
+Record a non-sale cash movement (Drop/Payout).
+
+- **URL**: `/cash/transaction`
+- **Method**: `POST`
+- **Auth Required**: Yes
+  **Request Body:**
+
+```json
+{
+  "type": "DROP", // or "PAYOUT", "FLOAT_IN"
+  "amount": 200.0,
+  "reason": "Mid-day safe drop"
+}
+```

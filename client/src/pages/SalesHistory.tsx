@@ -11,6 +11,8 @@ export function SalesHistory() {
   const [dateFrom, setDateFrom] = useState('');
   const [dateTo, setDateTo] = useState('');
 
+  const [refundItems, setRefundItems] = useState<Record<string, number>>({});
+
   useEffect(() => {
     loadSales();
   }, [dateFrom, dateTo]);
@@ -30,22 +32,56 @@ export function SalesHistory() {
     }
   };
 
+  const openDetails = (sale: any) => {
+      setSelectedSale(sale);
+      setRefundReason('');
+      setRefundItems({});
+      setMessage('');
+  };
+
+  const handleRefundQtyChange = (skuId: string, qty: number, max: number) => {
+      if (qty < 0) qty = 0;
+      if (qty > max) qty = max;
+      setRefundItems(prev => ({ ...prev, [skuId]: qty }));
+  };
+
   const handleRefund = async () => {
     if (!selectedSale || !refundReason) return;
-    if (!confirm('Are you sure you want to refund this sale?')) return;
+    
+    // Calculate items to refund
+    const itemsToRefund = Object.entries(refundItems)
+        .filter(([_, qty]) => qty > 0)
+        .map(([skuId, qty]) => ({ skuId, qty }));
+        
+    if (itemsToRefund.length === 0) {
+        alert("Please select at least one item to refund");
+        return;
+    }
+
+    if (!confirm(`Are you sure you want to refund ${itemsToRefund.length} items?`)) return;
 
     try {
-      // Full refund for MVP simplification
       await api.post(`/sales/${selectedSale.id}/refund`, {
-        reason: refundReason
+        reason: refundReason,
+        items: itemsToRefund
       });
       setMessage('Refund successful');
       setRefundReason('');
+      setRefundItems({});
       setSelectedSale(null);
       loadSales();
     } catch (err: any) {
       setMessage('Error: ' + (err.response?.data?.message || err.message));
     }
+  };
+
+  // Helper to get max refundable qty
+  const getMaxRefundable = (saleItem: any, sale: any) => {
+      const alreadyRefunded = sale.refunds.reduce((sum: number, r: any) => {
+          const ri = r.items.find((i: any) => i.skuId === saleItem.skuId);
+          return sum + (ri ? ri.qty : 0);
+      }, 0);
+      return saleItem.qty - alreadyRefunded;
   };
 
   return (
@@ -102,7 +138,7 @@ export function SalesHistory() {
                 </td>
                 <td className="p-2">
                   <button 
-                    onClick={() => setSelectedSale(sale)}
+                    onClick={() => openDetails(sale)}
                     className="text-blue-600 hover:underline text-sm"
                   >
                     Details / Refund
@@ -115,30 +151,60 @@ export function SalesHistory() {
       </div>
 
       {selectedSale && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4">
-          <div className="bg-white p-6 rounded shadow-lg max-w-lg w-full">
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+          <div className="bg-white p-6 rounded shadow-lg max-w-2xl w-full max-h-[90vh] overflow-y-auto">
             <h2 className="text-xl font-bold mb-4">Sale Details</h2>
-            <div className="mb-4">
-              <p><strong>ID:</strong> {selectedSale.id}</p>
-              <p><strong>Date:</strong> {new Date(selectedSale.createdAt).toLocaleString()}</p>
-              <p><strong>Total:</strong> ${selectedSale.total.toFixed(2)}</p>
+            <div className="mb-4 grid grid-cols-3 gap-4 text-sm">
+                <div><strong>ID:</strong> {selectedSale.id}</div>
+                <div><strong>Date:</strong> {new Date(selectedSale.createdAt).toLocaleString()}</div>
+                <div><strong>Total:</strong> ${selectedSale.total.toFixed(2)}</div>
             </div>
             
-            <h3 className="font-bold mb-2">Items</h3>
-            <ul className="mb-4 space-y-1">
-              {selectedSale.items.map((item: any) => (
-                <li key={item.id} className="flex justify-between">
-                  <span>{item.qty}x {item.skuId.slice(-6)}</span>
-                  <span>${(item.price * item.qty).toFixed(2)}</span>
-                </li>
-              ))}
-            </ul>
+            <h3 className="font-bold mb-2">Items (Select to Refund)</h3>
+            <div className="bg-gray-50 p-2 rounded mb-4">
+                <table className="w-full text-sm">
+                    <thead>
+                        <tr className="text-left text-gray-500">
+                            <th className="pb-2">Item</th>
+                            <th className="pb-2">Sold</th>
+                            <th className="pb-2">Refunded</th>
+                            <th className="pb-2">Available</th>
+                            <th className="pb-2">Refund Qty</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                    {selectedSale.items.map((item: any) => {
+                         const max = getMaxRefundable(item, selectedSale);
+                         const current = refundItems[item.skuId] || 0;
+                         return (
+                            <tr key={item.id} className="border-t">
+                                <td className="py-2">{item.skuId.slice(-6)} <span className="text-xs text-gray-500">${item.price}</span></td>
+                                <td className="py-2">{item.qty}</td>
+                                <td className="py-2">{item.qty - max}</td>
+                                <td className="py-2 font-bold">{max}</td>
+                                <td className="py-2">
+                                    <input 
+                                        type="number" 
+                                        min="0" 
+                                        max={max}
+                                        value={current}
+                                        disabled={max === 0}
+                                        onChange={(e) => handleRefundQtyChange(item.skuId, parseInt(e.target.value) || 0, max)}
+                                        className="w-16 border rounded p-1"
+                                    />
+                                </td>
+                            </tr>
+                         );
+                    })}
+                    </tbody>
+                </table>
+            </div>
 
             {selectedSale.refunds.length > 0 && (
-              <div className="mb-4 p-2 bg-red-50 text-red-800 rounded">
-                <p className="font-bold">Already Refunded:</p>
+              <div className="mb-4 p-2 bg-red-50 text-red-800 rounded text-sm">
+                <p className="font-bold">Refund History:</p>
                 {selectedSale.refunds.map((r: any) => (
-                   <p key={r.id}>-${r.amount.toFixed(2)} ({r.reason})</p>
+                   <p key={r.id}>-${r.amount.toFixed(2)} ({r.reason}) - {new Date(r.createdAt).toLocaleTimeString()}</p>
                 ))}
               </div>
             )}
@@ -148,7 +214,7 @@ export function SalesHistory() {
               <input 
                 type="text" 
                 className="w-full border p-2 rounded mb-2"
-                placeholder="Reason for refund"
+                placeholder="Reason for refund (Required)"
                 value={refundReason}
                 onChange={(e) => setRefundReason(e.target.value)}
               />
@@ -161,9 +227,10 @@ export function SalesHistory() {
                 </button>
                 <button 
                   onClick={handleRefund}
-                  className="px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700"
+                  disabled={!refundReason || Object.values(refundItems).every(v => v === 0)}
+                  className="px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700 disabled:opacity-50"
                 >
-                  Refund Sale
+                  Refund Selected Items
                 </button>
               </div>
             </div>

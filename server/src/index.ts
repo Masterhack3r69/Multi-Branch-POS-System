@@ -6,6 +6,7 @@ import productRoutes from './routes/product.routes';
 import branchRoutes from './routes/branch.routes';
 import saleRoutes from './routes/sale.routes';
 import inventoryRoutes from './routes/inventory.routes';
+import cashRoutes from './routes/cash.routes';
 import userRoutes from './routes/user.routes';
 
 dotenv.config();
@@ -21,6 +22,7 @@ app.use('/api/products', productRoutes);
 app.use('/api/branches', branchRoutes);
 app.use('/api/sales', saleRoutes);
 app.use('/api/inventory', inventoryRoutes);
+app.use('/api/cash', cashRoutes);
 app.use('/api/users', userRoutes);
 
 app.get('/health', (req, res) => {

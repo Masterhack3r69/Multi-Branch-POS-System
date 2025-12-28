@@ -17,8 +17,14 @@ interface CartItem {
   qty: number;
 }
 
+import { CashSessionModal } from '@/components/CashSessionModal';
+import { CloseSessionModal } from '@/components/CloseSessionModal';
+
 export function POSTerminal() {
   const { user, logout } = useAuthStore();
+  const [sessionActive, setSessionActive] = useState(false);
+  const [showCloseSession, setShowCloseSession] = useState(false);
+  // Removed unused offlineMode (using 'online' state instead)
   const [products, setProducts] = useState<Product[]>([]);
   const [stockMap, setStockMap] = useState<Record<string, number>>({});
   const [cart, setCart] = useState<CartItem[]>([]);
@@ -249,6 +255,26 @@ export function POSTerminal() {
           </button>
         </div>
       </div>
+      {/* Cash Session Enforcement */}
+      {/* Wait for branch/terminal selection before forcing session */}
+      {!sessionActive && branchId && terminalId && (
+          <CashSessionModal 
+            branchId={branchId}
+            terminalId={terminalId}
+            onSessionActive={() => setSessionActive(true)} 
+            onLogout={logout}
+          />
+      )}
+
+      {showCloseSession && (
+          <CloseSessionModal 
+            onClosed={() => {
+                setShowCloseSession(false);
+                setSessionActive(false); // Force re-check -> triggers open drawer modal
+            }}
+            onCancel={() => setShowCloseSession(false)}
+          />
+      )}
     </div>
   );
 }

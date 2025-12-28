@@ -8,37 +8,40 @@ datasource db {
 }
 
 model Branch {
-  id        String   @id @default(cuid())
-  name      String
-  address   String?
-  code      String   @unique
-  active    Boolean  @default(true)
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-  terminals Terminal[]
-  stocks    Stock[]
-  users     User[]
+  id             String          @id @default(cuid())
+  name           String
+  address        String?
+  code           String          @unique
+  active         Boolean         @default(true)
+  createdAt      DateTime        @default(now())
+  updatedAt      DateTime        @updatedAt
+  terminals      Terminal[]
+  stocks         Stock[]
+  users          User[]
   stockMovements StockMovement[]
+  cashSessions   CashSession[]
 }
 
 model Terminal {
-  id        String   @id @default(cuid())
-  branchId  String
-  name      String
-  active    Boolean  @default(true)
-  branch    Branch   @relation(fields: [branchId], references: [id])
+  id           String        @id @default(cuid())
+  branchId     String
+  name         String
+  active       Boolean       @default(true)
+  branch       Branch        @relation(fields: [branchId], references: [id])
+  cashSessions CashSession[]
 }
 
 model User {
-  id        String   @id @default(cuid())
-  email     String   @unique
-  password  String
-  name      String
-  role      Role     @default(CASHIER)
-  branchId  String?
-  branch    Branch?  @relation(fields: [branchId], references: [id])
-  active    Boolean  @default(true)
-  createdAt DateTime @default(now())
+  id           String        @id @default(cuid())
+  email        String        @unique
+  password     String
+  name         String
+  role         Role          @default(CASHIER)
+  branchId     String?
+  branch       Branch?       @relation(fields: [branchId], references: [id])
+  active       Boolean       @default(true)
+  createdAt    DateTime      @default(now())
+  cashSessions CashSession[]
 }
 
 enum Role {
@@ -60,27 +63,27 @@ model Product {
 }
 
 model SKU {
-  id        String   @id @default(cuid())
-  productId String
-  barcode   String?  @unique
-  name      String?
-  active    Boolean  @default(true)
-  createdAt DateTime @default(now())
-  product   Product  @relation(fields: [productId], references: [id])
-  stocks    Stock[]
+  id             String          @id @default(cuid())
+  productId      String
+  barcode        String?         @unique
+  name           String?
+  active         Boolean         @default(true)
+  createdAt      DateTime        @default(now())
+  product        Product         @relation(fields: [productId], references: [id])
+  stocks         Stock[]
   stockMovements StockMovement[]
   refundItems    RefundItem[]
 }
 
 model Stock {
-  id                String   @id @default(cuid())
+  id                String          @id @default(cuid())
   skuId             String
   branchId          String
-  qty               Int      @default(0)
-  lowStockThreshold Int      @default(10)
-  sku               SKU      @relation(fields: [skuId], references: [id])
-  branch            Branch   @relation(fields: [branchId], references: [id])
-  updatedAt         DateTime @updatedAt
+  qty               Int             @default(0)
+  lowStockThreshold Int             @default(10)
+  sku               SKU             @relation(fields: [skuId], references: [id])
+  branch            Branch          @relation(fields: [branchId], references: [id])
+  updatedAt         DateTime        @updatedAt
   movements         StockMovement[]
 
   @@unique([skuId, branchId])
@@ -113,37 +116,36 @@ enum MovementType {
 }
 
 model Sale {
-  id         String      @id @default(cuid())
+  id         String     @id @default(cuid())
   branchId   String
   terminalId String
   cashierId  String
   total      Float
   tax        Float
-  createdAt  DateTime    @default(now())
+  createdAt  DateTime   @default(now())
   items      SaleItem[]
   payments   Payment[]
   refunds    Refund[]
 }
 
 model SaleItem {
-  id        String  @id @default(cuid())
-  saleId    String
-  skuId     String
-  qty       Int
-  price     Float
-  discount  Float?  @default(0)
-  sale      Sale    @relation(fields: [saleId], references: [id])
+  id       String @id @default(cuid())
+  saleId   String
+  skuId    String
+  qty      Int
+  price    Float
+  discount Float? @default(0)
+  sale     Sale   @relation(fields: [saleId], references: [id])
 }
 
 model Payment {
-  id        String  @id @default(cuid())
-  saleId    String
-  method    String
-  amount    Float
-  provider  String?
-  sale      Sale    @relation(fields: [saleId], references: [id])
+  id       String  @id @default(cuid())
+  saleId   String
+  method   String
+  amount   Float
+  provider String?
+  sale     Sale    @relation(fields: [saleId], references: [id])
 }
-
 
 model Refund {
   id        String       @id @default(cuid())
@@ -166,9 +168,43 @@ model RefundItem {
 }
 
 model AuditLog {
-  id        String  @id @default(cuid())
+  id        String   @id @default(cuid())
   actorId   String?
   action    String
   meta      Json?
   createdAt DateTime @default(now())
+}
+
+model CashSession {
+  id             String            @id @default(cuid())
+  branchId       String
+  terminalId     String
+  cashierId      String
+  startTime      DateTime          @default(now())
+  endTime        DateTime?
+  startAmount    Float
+  endAmount      Float?
+  expectedAmount Float?
+  transactions   CashTransaction[]
+
+  branch   Branch   @relation(fields: [branchId], references: [id])
+  terminal Terminal @relation(fields: [terminalId], references: [id])
+  cashier  User     @relation(fields: [cashierId], references: [id])
+}
+
+model CashTransaction {
+  id        String              @id @default(cuid())
+  sessionId String
+  type      CashTransactionType
+  amount    Float
+  reason    String?
+  createdAt DateTime            @default(now())
+
+  session CashSession @relation(fields: [sessionId], references: [id])
+}
+
+enum CashTransactionType {
+  FLOAT_IN
+  DROP
+  PAYOUT
 }

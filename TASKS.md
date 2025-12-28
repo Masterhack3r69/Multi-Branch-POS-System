@@ -18,14 +18,14 @@
 
 ## Phase 2: Sales Integrity (Next)
 
-- [ ] **Refunds**:
-  - [ ] Partial refunds
-  - [ ] Time-limited cashier refunds (same-day only)
-  - [ ] Refund validation (cannot refund > sold)
-- [ ] **Cash Management**:
-  - [ ] Opening/Closing Cash Drawer sessions
-  - [ ] Cash Drop/Payout tracking
-  - [ ] Day-end reconciliation reporting
+- [x] **Refunds**:
+  - [x] Partial refunds
+  - [x] Time-limited cashier refunds (same-day only)
+  - [x] Refund validation (cannot refund > sold)
+- [x] **Cash Management**:
+  - [x] Opening/Closing Cash Drawer sessions
+  - [x] Cash Drop/Payout tracking
+  - [x] Day-end reconciliation reporting
 
 ## Phase 3: Reporting & Analytics
 
