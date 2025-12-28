@@ -1,6 +1,17 @@
 import { useState, useEffect } from 'react';
 import { api } from '@/lib/api';
 import { useAuthStore } from '@/store/authStore';
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/Table";
+import { Button } from "@/components/ui/Button";
+import { Input } from "@/components/ui/Input";
+import { Badge } from "@/components/ui/Badge";
 
 export function Branches() {
   const { user } = useAuthStore();
@@ -75,110 +86,113 @@ export function Branches() {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-8">
       <div className="flex justify-between items-center">
-        <h1 className="text-2xl font-bold">Branch Management</h1>
-        <button
+        <h1 className="text-2xl font-black uppercase tracking-tighter">Branch Management</h1>
+        <Button
           onClick={() => {
             setEditingBranch(null);
             setFormData({ name: '', code: '', address: '' });
             setShowModal(true);
           }}
-          className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700"
         >
           Add Branch
-        </button>
+        </Button>
       </div>
 
-      <div className="bg-white rounded shadow overflow-x-auto">
-        <table className="min-w-full text-left">
-          <thead>
-            <tr className="border-b bg-gray-50">
-              <th className="p-3">Name</th>
-              <th className="p-3">Code</th>
-              <th className="p-3">Address</th>
-              <th className="p-3">Status</th>
-              <th className="p-3">Actions</th>
-            </tr>
-          </thead>
-          <tbody>
+      <div className="bg-white">
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead>Name</TableHead>
+              <TableHead>Code</TableHead>
+              <TableHead>Address</TableHead>
+              <TableHead>Status</TableHead>
+              <TableHead>Actions</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
             {branches.map((b) => (
-              <tr key={b.id} className="border-b hover:bg-gray-50">
-                <td className="p-3">{b.name}</td>
-                <td className="p-3 font-mono text-sm">{b.code}</td>
-                <td className="p-3">{b.address || '-'}</td>
-                <td className="p-3">
-                  <span className={`px-2 py-1 rounded text-xs ${b.active ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}`}>
+              <TableRow key={b.id}>
+                <TableCell className="font-bold uppercase">{b.name}</TableCell>
+                <TableCell className="font-mono text-sm">{b.code}</TableCell>
+                <TableCell className="uppercase">{b.address || '-'}</TableCell>
+                <TableCell>
+                  <Badge variant={b.active ? 'success' : 'destructive'}>
                     {b.active ? 'Active' : 'Disabled'}
-                  </span>
-                </td>
-                <td className="p-3 flex space-x-2">
-                  <button onClick={() => handleEdit(b)} className="text-blue-600 hover:underline">Edit</button>
-                  {b.active && (
-                    <button 
-                      onClick={() => handleToggleStatus(b.id)} 
-                      className="text-red-600 hover:underline"
+                  </Badge>
+                </TableCell>
+                <TableCell>
+                  <div className="flex gap-2">
+                    <Button 
+                        variant="ghost" 
+                        size="sm"
+                        onClick={() => handleEdit(b)}
                     >
-                      Disable
-                    </button>
-                  )}
-                </td>
-              </tr>
+                        Edit
+                    </Button>
+                    {b.active && (
+                      <Button 
+                        variant="danger"
+                        size="sm"
+                        onClick={() => handleToggleStatus(b.id)} 
+                      >
+                        Disable
+                      </Button>
+                    )}
+                  </div>
+                </TableCell>
+              </TableRow>
             ))}
             {branches.length === 0 && !loading && (
-              <tr><td colSpan={5} className="p-4 text-center text-gray-500">No branches found</td></tr>
+              <TableRow><TableCell colSpan={5} className="text-center text-zinc-500 py-8 uppercase font-bold">No branches found</TableCell></TableRow>
             )}
-          </tbody>
-        </table>
+          </TableBody>
+        </Table>
       </div>
 
       {showModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4">
-          <div className="bg-white p-6 rounded shadow-lg w-full max-w-md">
-            <h2 className="text-xl font-bold mb-4">{editingBranch ? 'Edit Branch' : 'New Branch'}</h2>
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4 z-50">
+          <div className="bg-white p-6 border-4 border-black shadow-[8px_8px_0px_0px_rgba(0,0,0,1)] w-full max-w-md">
+            <h2 className="text-xl font-black uppercase mb-6">{editingBranch ? 'Edit Branch' : 'New Branch'}</h2>
             <form onSubmit={handleSubmit} className="space-y-4">
               <div>
-                <label className="block text-sm font-medium">Branch Name</label>
-                <input
+                <label className="block text-xs font-bold uppercase mb-1">Branch Name</label>
+                <Input
                   type="text"
-                  className="w-full border p-2 rounded"
                   value={formData.name}
                   onChange={e => setFormData({...formData, name: e.target.value})}
                   required
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium">Branch Code</label>
-                <input
+                <label className="block text-xs font-bold uppercase mb-1">Branch Code</label>
+                <Input
                   type="text"
-                  className="w-full border p-2 rounded"
                   value={formData.code}
                   onChange={e => setFormData({...formData, code: e.target.value})}
                   required
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium">Address</label>
+                <label className="block text-xs font-bold uppercase mb-1">Address</label>
                 <textarea
-                  className="w-full border p-2 rounded"
+                  className="flex w-full border-2 border-black bg-background px-3 py-2 text-sm font-bold uppercase ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 font-mono transition-all min-h-[80px]"
                   value={formData.address}
                   onChange={e => setFormData({...formData, address: e.target.value})}
                 />
               </div>
-              <div className="flex justify-end space-x-2 pt-4">
-                <button
+              <div className="flex justify-end gap-3 pt-4 border-t-2 border-black mt-6">
+                <Button
                   type="button"
+                  variant="outline"
                   onClick={() => setShowModal(false)}
-                  className="px-4 py-2 text-gray-600 hover:bg-gray-100 rounded"
                 >
                   Cancel
-                </button>
-                <button
-                  type="submit"
-                  className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
-                >
+                </Button>
+                <Button type="submit">
                   Save
-                </button>
+                </Button>
               </div>
             </form>
           </div>

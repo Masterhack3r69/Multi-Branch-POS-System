@@ -2,6 +2,9 @@ import { useState, useEffect } from 'react';
 import { api } from '@/lib/api';
 import { useAuthStore } from '@/store/authStore';
 import { db } from '@/lib/db';
+import { Button } from '@/components/ui/Button';
+import { Input } from '@/components/ui/Input';
+import { Badge } from '@/components/ui/Badge';
 
 interface Product {
   id: string;
@@ -24,7 +27,6 @@ export function POSTerminal() {
   const { user, logout } = useAuthStore();
   const [sessionActive, setSessionActive] = useState(false);
   const [showCloseSession, setShowCloseSession] = useState(false);
-  // Removed unused offlineMode (using 'online' state instead)
   const [products, setProducts] = useState<Product[]>([]);
   const [stockMap, setStockMap] = useState<Record<string, number>>({});
   const [cart, setCart] = useState<CartItem[]>([]);
@@ -32,8 +34,6 @@ export function POSTerminal() {
   const [loading, setLoading] = useState(false);
   const [online, setOnline] = useState(navigator.onLine);
 
-  // Need to select terminal context. For MVP, we'll auto-select the first one available or prompt.
-  // We'll fetch branches/terminals on mount.
   const [branchId, setBranchId] = useState<string>('');
   const [terminalId, setTerminalId] = useState<string>('');
 
@@ -41,7 +41,7 @@ export function POSTerminal() {
     window.addEventListener('online', () => setOnline(true));
     window.addEventListener('offline', () => setOnline(false));
     
-    fetchContext(); // This sets branchId
+    fetchContext();
     
     return () => {
         window.removeEventListener('online', () => setOnline(true));
@@ -62,8 +62,6 @@ export function POSTerminal() {
       if (online) {
           const bRes = await api.get('/branches');
           if (bRes.data.length > 0) {
-            // Priority: User's assigned branch -> First available branch
-            // In a real app, we'd persist the selected terminal/branch in local storage
             const targetBranch = user?.branchId || bRes.data[0].id;
             setBranchId(targetBranch);
             
@@ -115,7 +113,6 @@ export function POSTerminal() {
       console.log('Syncing sales...', pending.length);
       for (const sale of pending) {
           try {
-              // Remove extra fields before sending
               const { synced, clientSaleId, ...payload } = sale; 
               await api.post('/sales', { ...payload, clientSaleId });
               await db.markSaleSynced(clientSaleId);
@@ -123,12 +120,11 @@ export function POSTerminal() {
               console.error('Sync failed for', sale.clientSaleId, e);
           }
       }
-      console.log('Sync complete');
-      fetchStock(); // Refresh stock after sync
+      fetchStock();
   };
 
   const addToCart = (product: Product) => {
-    const sku = product.skus[0]; // Default SKU
+    const sku = product.skus[0];
     setCart((prev) => {
       const existing = prev.find((item) => item.skuId === sku.id);
       if (existing) {
@@ -153,14 +149,14 @@ export function POSTerminal() {
       terminalId,
       cashierId: user?.id,
       items: cart.map(item => ({ skuId: item.skuId, qty: item.qty, price: item.price })),
-      payments: [{ method: 'CASH', amount: total * 1.1 }] // Auto-calc tax/payment for MVP speed
+      payments: [{ method: 'CASH', amount: total * 1.1 }]
     };
 
     try {
       if (online) {
           await api.post('/sales', saleData);
           alert('Sale completed!');
-          fetchStock(); // Refresh stock immediately
+          fetchStock();
       } else {
           await db.queueSale(saleData);
           alert('Sale queued (Offline)');
@@ -187,18 +183,17 @@ export function POSTerminal() {
         <div className="flex justify-between items-center mb-6">
             <h1 className="text-2xl font-black uppercase tracking-tighter">Terminal</h1>
              <div className="flex items-center gap-4">
-                 <span className={`px-2 py-1 text-xs font-bold uppercase border border-black ${online ? 'bg-green-600 text-white' : 'bg-red-600 text-white'}`}>
+                 <Badge variant={online ? 'success' : 'destructive'}>
                     {online ? 'System Online' : 'System Offline'}
-                 </span>
+                 </Badge>
             </div>
         </div>
         
         <div className="mb-6">
-            <input
-            className="w-full bg-zinc-50 border-2 border-black p-4 text-sm font-bold uppercase placeholder-zinc-400 focus:outline-none focus:bg-white transition-colors"
-            placeholder="SEARCH SKU / PRODUCT NAME..."
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
+            <Input
+              placeholder="SEARCH SKU / PRODUCT NAME..."
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
             />
         </div>
         
@@ -216,9 +211,9 @@ export function POSTerminal() {
               >
                 <div className="flex justify-between items-start mb-2">
                     <h3 className="font-bold uppercase text-sm leading-tight">{p.name}</h3>
-                    <span className={`text-[10px] font-bold px-1 py-0.5 border ${hasStock ? 'border-green-600 text-green-600 group-hover:border-white group-hover:text-white' : 'border-red-600 text-red-600 group-hover:border-white group-hover:text-white'}`}>
-                        {stockQty}
-                    </span>
+                    <Badge variant={hasStock ? 'success' : 'destructive'} className="group-hover:bg-white group-hover:text-black group-hover:border-black border">
+                       {stockQty}
+                    </Badge>
                 </div>
                 <p className="font-mono text-lg font-bold">${p.price.toFixed(2)}</p>
               </div>
@@ -232,7 +227,7 @@ export function POSTerminal() {
         <div className="p-4 border-b-2 border-black bg-zinc-50">
             <h2 className="font-black uppercase tracking-tight flex justify-between items-center">
                 Current Sale
-                <span className="text-xs font-mono bg-black text-white px-2 py-1">{cart.length} ITEMS</span>
+                <Badge variant="default" className="font-mono">{cart.length} ITEMS</Badge>
             </h2>
         </div>
 
@@ -260,13 +255,13 @@ export function POSTerminal() {
             <span>Total</span>
             <span className="font-mono">${total.toFixed(2)}</span>
           </div>
-          <button
+          <Button
             onClick={checkout}
             disabled={cart.length === 0 || loading}
-            className="w-full py-4 bg-black text-white font-black uppercase tracking-widest hover:bg-zinc-800 disabled:bg-zinc-300 disabled:cursor-not-allowed transition-colors"
+            className="w-full h-14 text-lg"
           >
             {loading ? 'PROCESSING...' : 'COMPLETE SALE'}
-          </button>
+          </Button>
         </div>
       </div>
 

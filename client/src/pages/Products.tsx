@@ -1,6 +1,16 @@
 import { useState, useEffect } from 'react';
 import { api } from '@/lib/api';
 import { useAuthStore } from '@/store/authStore';
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/Table";
+import { Button } from "@/components/ui/Button";
+import { Input } from "@/components/ui/Input";
 
 interface Product {
   id: string;
@@ -151,117 +161,114 @@ export function Products() {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-8">
       <div className="flex justify-between items-center">
-        <h1 className="text-2xl font-bold">Product Management</h1>
-        <button
+        <h1 className="text-2xl font-black uppercase tracking-tighter">Product Management</h1>
+        <Button
           onClick={() => { resetForm(); setIsModalOpen(true); }}
-          className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700"
         >
           Add Product
-        </button>
+        </Button>
       </div>
 
-      <div className="bg-white rounded shadow overflow-x-auto">
-        <table className="min-w-full text-left">
-          <thead>
-            <tr className="border-b bg-gray-50">
-              <th className="p-4">Name</th>
-              <th className="p-4">Reference / SKU</th>
-              <th className="p-4">Price</th>
-              <th className="p-4">Description</th>
-              <th className="p-4">Actions</th>
-            </tr>
-          </thead>
-          <tbody>
+      <div className="bg-white">
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead>Name</TableHead>
+              <TableHead>Reference / SKU</TableHead>
+              <TableHead>Price</TableHead>
+              <TableHead>Description</TableHead>
+              <TableHead>Actions</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
             {products.map((product) => (
-              <tr key={product.id} className="border-b hover:bg-gray-50">
-                <td className="p-4 font-medium">{product.name}</td>
-                <td className="p-4 font-mono text-sm">{product.sku}</td>
-                <td className="p-4">${product.price.toFixed(2)}</td>
-                <td className="p-4 text-gray-500 text-sm max-w-xs truncate">{product.description}</td>
-                <td className="p-4 space-x-2">
-                  <button
-                    onClick={() => openEdit(product)}
-                    className="text-blue-600 hover:text-blue-800"
-                  >
-                    Edit
-                  </button>
-                  <button
-                    onClick={() => openDistribute(product)}
-                    className="text-green-600 hover:text-green-800"
-                  >
-                    Distribute
-                  </button>
-                </td>
-              </tr>
+              <TableRow key={product.id}>
+                <TableCell className="font-bold uppercase">{product.name}</TableCell>
+                <TableCell className="font-mono text-sm">{product.sku}</TableCell>
+                <TableCell className="font-mono">${product.price.toFixed(2)}</TableCell>
+                <TableCell className="text-zinc-500 text-sm max-w-xs truncate uppercase">{product.description}</TableCell>
+                <TableCell>
+                  <div className="flex gap-2">
+                    <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => openEdit(product)}
+                    >
+                        Edit
+                    </Button>
+                    <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => openDistribute(product)}
+                    >
+                        Distribute
+                    </Button>
+                  </div>
+                </TableCell>
+              </TableRow>
             ))}
-          </tbody>
-        </table>
+          </TableBody>
+        </Table>
       </div>
 
       {/* Create/Edit Modal */}
       {isModalOpen && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4">
-          <div className="bg-white rounded-lg p-6 max-w-md w-full">
-            <h2 className="text-xl font-bold mb-4">
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4 z-50">
+          <div className="bg-white p-6 border-4 border-black shadow-[8px_8px_0px_0px_rgba(0,0,0,1)] max-w-md w-full">
+            <h2 className="text-xl font-black uppercase mb-6">
               {editingProduct ? 'Edit Product' : 'New Product'}
             </h2>
             <form onSubmit={handleSubmit} className="space-y-4">
               <div>
-                <label className="block text-sm font-medium mb-1">Product Name</label>
-                <input
+                <label className="block text-xs font-bold uppercase mb-1">Product Name</label>
+                <Input
                   type="text"
                   required
-                  className="w-full border p-2 rounded"
                   value={formData.name}
                   onChange={e => setFormData({...formData, name: e.target.value})}
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium mb-1">Reference SKU</label>
-                <input
+                <label className="block text-xs font-bold uppercase mb-1">Reference SKU</label>
+                <Input
                   type="text"
                   required
-                  className="w-full border p-2 rounded"
                   value={formData.sku}
                   onChange={e => setFormData({...formData, sku: e.target.value})}
-                  disabled={!!editingProduct} // Usually SKUs shouldn't change easily
+                  disabled={!!editingProduct}
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium mb-1">Price ($)</label>
-                <input
+                <label className="block text-xs font-bold uppercase mb-1">Price ($)</label>
+                <Input
                   type="number"
                   step="0.01"
                   required
-                  className="w-full border p-2 rounded"
                   value={formData.price}
                   onChange={e => setFormData({...formData, price: e.target.value})}
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium mb-1">Description</label>
+                <label className="block text-xs font-bold uppercase mb-1">Description</label>
                 <textarea
-                  className="w-full border p-2 rounded"
+                  className="flex w-full border-2 border-black bg-background px-3 py-2 text-sm font-bold uppercase ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 font-mono transition-all min-h-[80px]"
                   value={formData.description}
                   onChange={e => setFormData({...formData, description: e.target.value})}
                 />
               </div>
-              <div className="flex justify-end space-x-2 pt-4">
-                <button
+              <div className="flex justify-end gap-3 pt-4 border-t-2 border-black mt-6">
+                <Button
                   type="button"
+                  variant="outline"
                   onClick={() => setIsModalOpen(false)}
-                  className="px-4 py-2 border rounded hover:bg-gray-50"
                 >
                   Cancel
-                </button>
-                <button
-                  type="submit"
-                  className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
-                >
+                </Button>
+                <Button type="submit">
                   Save
-                </button>
+                </Button>
               </div>
             </form>
           </div>
@@ -270,52 +277,51 @@ export function Products() {
       
       {/* Distribute Modal */}
       {isDistributeOpen && selectedProductForDist && (
-          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4">
-          <div className="bg-white rounded-lg p-6 max-w-md w-full">
-            <h2 className="text-xl font-bold mb-4">
+          <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4 z-50">
+          <div className="bg-white p-6 border-4 border-black shadow-[8px_8px_0px_0px_rgba(0,0,0,1)] max-w-md w-full">
+            <h2 className="text-xl font-black uppercase mb-4">
               Distribute Product
             </h2>
-            <p className="mb-4 text-sm text-gray-600">
-                Initialize stock for <strong>{selectedProductForDist.name}</strong> at a specific branch.
+            <p className="mb-6 text-sm font-mono text-zinc-600 border-b-2 border-black pb-4">
+                Initialize stock for <strong className="uppercase text-black">{selectedProductForDist.name}</strong> at a specific branch.
             </p>
             <form onSubmit={handleDistribute} className="space-y-4">
               <div>
-                <label className="block text-sm font-medium mb-1">Target Branch</label>
+                <label className="block text-xs font-bold uppercase mb-1">Target Branch</label>
                 <select
                   required
-                  className="w-full border p-2 rounded"
+                  className="flex h-10 w-full border-2 border-black bg-background px-3 py-2 text-sm font-bold uppercase ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 font-mono"
                   value={distData.branchId}
                   onChange={e => setDistData({...distData, branchId: e.target.value})}
                 >
                     {branches.map(b => (
-                        <option key={b.id} value={b.id}>{b.name}</option>
+                        <option key={b.id} value={b.id}>{b.name.toUpperCase()}</option>
                     ))}
                 </select>
               </div>
               <div>
-                <label className="block text-sm font-medium mb-1">Initial Stock Qty</label>
-                <input
+                <label className="block text-xs font-bold uppercase mb-1">Initial Stock Qty</label>
+                <Input
                   type="number"
                   required
-                  className="w-full border p-2 rounded"
                   value={distData.initialQty}
                   onChange={e => setDistData({...distData, initialQty: e.target.value})}
                 />
               </div>
-              <div className="flex justify-end space-x-2 pt-4">
-                <button
+              <div className="flex justify-end gap-3 pt-4 border-t-2 border-black mt-6">
+                <Button
                   type="button"
+                  variant="outline"
                   onClick={() => setIsDistributeOpen(false)}
-                  className="px-4 py-2 border rounded hover:bg-gray-50"
                 >
                   Cancel
-                </button>
-                <button
+                </Button>
+                <Button
                   type="submit"
-                  className="px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700"
+                  variant="default" // Using default (Black) for consistency, or standard styles. Distribute is a positive action.
                 >
                   Distribute
-                </button>
+                </Button>
               </div>
             </form>
           </div>

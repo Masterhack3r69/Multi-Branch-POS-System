@@ -1,5 +1,8 @@
 import { useState, useEffect } from 'react';
 import { api } from '@/lib/api';
+import { Button } from "@/components/ui/Button";
+import { Input } from "@/components/ui/Input";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/Card";
 
 export function Reports() {
   const [activeTab, setActiveTab] = useState<'SALES' | 'INVENTORY'>('SALES');
@@ -62,40 +65,38 @@ export function Reports() {
   };
 
   return (
-    <div className="space-y-6">
-      <h1 className="text-2xl font-bold">Reports & Analytics</h1>
+    <div className="space-y-8">
+      <h1 className="text-2xl font-black uppercase tracking-tighter">Reports & Analytics</h1>
 
       {/* Filters */}
-      <div className="bg-white p-4 rounded shadow flex flex-wrap gap-4 items-end">
+      <div className="bg-white p-6 border-2 border-black flex flex-wrap gap-4 items-end">
         <div>
-            <label className="block text-sm font-medium">Branch</label>
+            <label className="block text-xs font-bold uppercase mb-1">Branch</label>
             <select 
-                className="border p-2 rounded w-48"
+                className="flex h-10 w-48 border-2 border-black bg-background px-3 py-2 text-sm font-bold uppercase ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 font-mono"
                 value={selectedBranch}
                 onChange={(e) => setSelectedBranch(e.target.value)}
             >
                 <option value="">All Branches</option>
                 {branches.map(b => (
-                    <option key={b.id} value={b.id}>{b.name}</option>
+                    <option key={b.id} value={b.id}>{b.name.toUpperCase()}</option>
                 ))}
             </select>
         </div>
         {activeTab === 'SALES' && (
             <>
                 <div>
-                    <label className="block text-sm font-medium">From</label>
-                    <input 
+                    <label className="block text-xs font-bold uppercase mb-1">From</label>
+                    <Input 
                         type="date" 
-                        className="border p-2 rounded"
                         value={dateFrom}
                         onChange={(e) => setDateFrom(e.target.value)}
                     />
                 </div>
                 <div>
-                    <label className="block text-sm font-medium">To</label>
-                    <input 
+                    <label className="block text-xs font-bold uppercase mb-1">To</label>
+                    <Input 
                         type="date" 
-                        className="border p-2 rounded"
                         value={dateTo}
                         onChange={(e) => setDateTo(e.target.value)}
                     />
@@ -105,59 +106,83 @@ export function Reports() {
       </div>
 
       {/* Tabs */}
-      <div className="border-b flex space-x-6">
-        <button 
-            className={`pb-2 px-1 ${activeTab === 'SALES' ? 'border-b-2 border-blue-600 font-bold' : 'text-gray-500'}`}
+      <div className="flex gap-4">
+        <Button 
+            variant={activeTab === 'SALES' ? 'default' : 'outline'}
             onClick={() => setActiveTab('SALES')}
         >
             Sales Performance
-        </button>
-        <button 
-            className={`pb-2 px-1 ${activeTab === 'INVENTORY' ? 'border-b-2 border-blue-600 font-bold' : 'text-gray-500'}`}
+        </Button>
+        <Button 
+            variant={activeTab === 'INVENTORY' ? 'default' : 'outline'}
             onClick={() => setActiveTab('INVENTORY')}
         >
             Inventory Value
-        </button>
+        </Button>
       </div>
 
       {/* Content */}
       {loading ? (
-          <div className="p-8 text-center text-gray-500">Loading Report...</div>
+          <div className="p-12 text-center text-zinc-500 font-bold uppercase tracking-wider animate-pulse">Loading Report...</div>
       ) : (
           <div className="grid gap-6">
               {activeTab === 'SALES' && salesReport && (
                   <>
-                    <div className="grid grid-cols-3 gap-6">
-                        <div className="bg-white p-6 rounded shadow">
-                            <h3 className="text-gray-500 text-sm font-bold uppercase">Total Sales</h3>
-                            <p className="text-3xl font-bold text-green-600">${salesReport.summary.totalSales.toFixed(2)}</p>
-                        </div>
-                        <div className="bg-white p-6 rounded shadow">
-                            <h3 className="text-gray-500 text-sm font-bold uppercase">Transactions</h3>
-                            <p className="text-3xl font-bold">{salesReport.summary.totalTransactions}</p>
-                        </div>
-                        <div className="bg-white p-6 rounded shadow">
-                            <h3 className="text-gray-500 text-sm font-bold uppercase">Avg Transaction</h3>
-                            <p className="text-3xl font-bold text-blue-600">${salesReport.summary.averageValue.toFixed(2)}</p>
-                        </div>
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                        <Card>
+                            <CardHeader>
+                                <CardTitle className="text-zinc-500 text-sm font-black uppercase">Total Sales</CardTitle>
+                            </CardHeader>
+                            <CardContent>
+                                <p className="text-4xl font-black font-mono tracking-tight">${salesReport.summary.totalSales.toFixed(2)}</p>
+                            </CardContent>
+                        </Card>
+                        <Card>
+                             <CardHeader>
+                                <CardTitle className="text-zinc-500 text-sm font-black uppercase">Transactions</CardTitle>
+                            </CardHeader>
+                            <CardContent>
+                                <p className="text-4xl font-black font-mono tracking-tight">{salesReport.summary.totalTransactions}</p>
+                            </CardContent>
+                        </Card>
+                        <Card>
+                             <CardHeader>
+                                <CardTitle className="text-zinc-500 text-sm font-black uppercase">Avg Transaction</CardTitle>
+                            </CardHeader>
+                            <CardContent>
+                                <p className="text-4xl font-black font-mono tracking-tight text-blue-600">${salesReport.summary.averageValue.toFixed(2)}</p>
+                            </CardContent>
+                        </Card>
                     </div>
                   </>
               )}
 
               {activeTab === 'INVENTORY' && inventoryReport && (
-                  <div className="grid grid-cols-3 gap-6">
-                      <div className="bg-white p-6 rounded shadow">
-                          <h3 className="text-gray-500 text-sm font-bold uppercase">Total Inventory Value</h3>
-                          <p className="text-3xl font-bold text-purple-600">${inventoryReport.totalValue.toFixed(2)}</p>
-                      </div>
-                      <div className="bg-white p-6 rounded shadow">
-                          <h3 className="text-gray-500 text-sm font-bold uppercase">Total Items (Qty)</h3>
-                          <p className="text-3xl font-bold">{inventoryReport.totalItems}</p>
-                      </div>
-                      <div className="bg-white p-6 rounded shadow">
-                          <h3 className="text-gray-500 text-sm font-bold uppercase">Low Stock Items</h3>
-                          <p className="text-3xl font-bold text-red-600">{inventoryReport.lowStockCount}</p>
-                      </div>
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                      <Card>
+                           <CardHeader>
+                                <CardTitle className="text-zinc-500 text-sm font-black uppercase">Total Inventory Value</CardTitle>
+                            </CardHeader>
+                            <CardContent>
+                                <p className="text-4xl font-black font-mono tracking-tight text-purple-600">${inventoryReport.totalValue.toFixed(2)}</p>
+                            </CardContent>
+                      </Card>
+                      <Card>
+                           <CardHeader>
+                                <CardTitle className="text-zinc-500 text-sm font-black uppercase">Total Items (Qty)</CardTitle>
+                            </CardHeader>
+                            <CardContent>
+                                <p className="text-4xl font-black font-mono tracking-tight">{inventoryReport.totalItems}</p>
+                            </CardContent>
+                      </Card>
+                      <Card>
+                           <CardHeader>
+                                <CardTitle className="text-zinc-500 text-sm font-black uppercase">Low Stock Items</CardTitle>
+                            </CardHeader>
+                           <CardContent>
+                                <p className="text-4xl font-black font-mono tracking-tight text-red-600">{inventoryReport.lowStockCount}</p>
+                           </CardContent>
+                      </Card>
                   </div>
               )}
           </div>

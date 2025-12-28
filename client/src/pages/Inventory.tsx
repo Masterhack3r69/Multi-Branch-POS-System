@@ -1,6 +1,17 @@
 import { useState, useEffect } from 'react';
 import { api } from '@/lib/api';
 import { useAuthStore } from '@/store/authStore';
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/Table";
+import { Button } from "@/components/ui/Button";
+import { Input } from "@/components/ui/Input";
+import { Badge } from "@/components/ui/Badge";
 
 export function Inventory() {
   const { user } = useAuthStore();
@@ -81,33 +92,33 @@ export function Inventory() {
   return (
     <div className="space-y-8">
       <div className="flex justify-between items-center">
-        <h1 className="text-2xl font-bold">Inventory Management</h1>
-        <div className="space-x-2">
-          <button 
+        <h1 className="text-2xl font-black uppercase tracking-tighter">Inventory Management</h1>
+        <div className="flex gap-2">
+          <Button 
+            variant={viewMode === 'LEVELS' ? 'default' : 'outline'}
             onClick={() => setViewMode('LEVELS')}
-            className={`px-4 py-2 rounded ${viewMode === 'LEVELS' ? 'bg-blue-600 text-white' : 'bg-gray-200'}`}
           >
             Stock Levels
-          </button>
-          <button 
+          </Button>
+          <Button 
+            variant={viewMode === 'HISTORY' ? 'default' : 'outline'}
             onClick={() => setViewMode('HISTORY')}
-            className={`px-4 py-2 rounded ${viewMode === 'HISTORY' ? 'bg-blue-600 text-white' : 'bg-gray-200'}`}
           >
             History
-          </button>
+          </Button>
         </div>
       </div>
 
-      {/* Adjustment Form - Always visible or maybe collapsible? Keeping visible as per request */}
-      <div className="bg-white p-6 rounded shadow">
-        <h2 className="text-xl font-bold mb-4">Adjust Stock</h2>
-        {message && <div className="p-2 mb-4 bg-blue-100 text-blue-700 rounded">{message}</div>}
+      {/* Adjustment Form */}
+      <div className="bg-white p-6 border-2 border-black">
+        <h2 className="text-xl font-black uppercase mb-4">Adjust Stock</h2>
+        {message && <div className="p-4 mb-4 border-2 border-black bg-blue-50 text-blue-900 font-mono text-sm uppercase">{message}</div>}
         <form onSubmit={handleAdjust} className="space-y-4">
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div>
-              <label className="block text-sm font-medium">Product / SKU</label>
+              <label className="block text-xs font-bold uppercase mb-1">Product / SKU</label>
               <select 
-                className="w-full border p-2 rounded"
+                className="flex h-10 w-full border-2 border-black bg-background px-3 py-2 text-sm font-bold uppercase ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 font-mono"
                 value={selectedSku}
                 onChange={(e) => setSelectedSku(e.target.value)}
                 required
@@ -116,26 +127,25 @@ export function Inventory() {
                 {products.map(p => (
                   p.skus.map((s: any) => (
                     <option key={s.id} value={s.id}>
-                      {p.name} - {s.name || s.barcode || 'Default'}
+                      {p.name.toUpperCase()} - {s.name || s.barcode || 'DEFAULT'}
                     </option>
                   ))
                 ))}
               </select>
             </div>
             <div>
-              <label className="block text-sm font-medium">Qty Change</label>
-              <input 
+              <label className="block text-xs font-bold uppercase mb-1">Qty Change</label>
+              <Input 
                 type="number" 
-                className="w-full border p-2 rounded"
                 value={adjustQty}
                 onChange={(e) => setAdjustQty(parseInt(e.target.value))}
                 required
               />
             </div>
             <div>
-              <label className="block text-sm font-medium">Reason</label>
+              <label className="block text-xs font-bold uppercase mb-1">Reason</label>
               <select
-                className="w-full border p-2 rounded"
+                className="flex h-10 w-full border-2 border-black bg-background px-3 py-2 text-sm font-bold uppercase ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 font-mono"
                 value={adjustReason}
                 onChange={(e) => setAdjustReason(e.target.value)}
                 required
@@ -149,106 +159,105 @@ export function Inventory() {
               </select>
             </div>
           </div>
-          <button type="submit" className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700">
+          <Button type="submit">
             Submit Adjustment
-          </button>
+          </Button>
         </form>
       </div>
 
       {viewMode === 'LEVELS' && (
-        <div className="bg-white p-6 rounded shadow">
-          <div className="flex justify-between items-center mb-4">
-            <h2 className="text-xl font-bold">Current Stock Levels</h2>
+        <div className="bg-white">
+          <div className="flex justify-between items-center mb-4 p-4 border-b-2 border-black bg-zinc-50">
+            <h2 className="text-xl font-black uppercase">Current Stock Levels</h2>
             <div className="flex items-center space-x-2">
               <input 
                 type="checkbox" 
                 id="lowStock"
                 checked={showLowStockOnly}
                 onChange={(e) => setShowLowStockOnly(e.target.checked)}
-                className="h-4 w-4"
+                className="h-4 w-4 border-2 border-black rounded-none focus:ring-black text-black"
               />
-              <label htmlFor="lowStock" className="cursor-pointer select-none font-medium text-gray-700">
+              <label htmlFor="lowStock" className="cursor-pointer select-none font-bold uppercase text-sm">
                 Show Low Stock Only
               </label>
             </div>
           </div>
           <div className="overflow-x-auto">
-            <table className="min-w-full text-left">
-              <thead>
-                <tr className="border-b bg-gray-50">
-                  <th className="p-3">Product Name</th>
-                  <th className="p-3">SKU / Barcode</th>
-                  <th className="p-3">Branch</th>
-                  <th className="p-3">Quantity</th>
-                  <th className="p-3">Status</th>
-                </tr>
-              </thead>
-              <tbody>
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Product Name</TableHead>
+                  <TableHead>SKU / Barcode</TableHead>
+                  <TableHead>Branch</TableHead>
+                  <TableHead>Quantity</TableHead>
+                  <TableHead>Status</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
                 {stocks.map((s: any) => {
                   const isLow = s.qty <= s.lowStockThreshold;
                   return (
-                    <tr key={s.id} className={`border-b hover:bg-gray-50 ${isLow ? 'bg-red-50' : ''}`}>
-                      <td className="p-3 font-medium">{s.sku?.product?.name}</td>
-                      <td className="p-3 text-sm text-gray-600">{s.sku?.name || s.sku?.barcode || '-'}</td>
-                      <td className="p-3">{s.branch?.name}</td>
-                      <td className={`p-3 font-bold ${isLow ? 'text-red-700' : 'text-gray-800'}`}>
+                    <TableRow key={s.id} className={isLow ? 'bg-red-50' : ''}>
+                      <TableCell className="font-bold uppercase">{s.sku?.product?.name}</TableCell>
+                      <TableCell className="font-mono text-xs">{s.sku?.name || s.sku?.barcode || '-'}</TableCell>
+                      <TableCell className="uppercase">{s.branch?.name}</TableCell>
+                      <TableCell className={`font-mono font-bold ${isLow ? 'text-red-700' : 'text-black'}`}>
                         {s.qty}
-                      </td>
-                      <td className="p-3">
+                      </TableCell>
+                      <TableCell>
                          {isLow ? (
-                           <span className="bg-red-100 text-red-800 px-2 py-1 rounded text-xs font-bold">Low Stock</span>
+                           <Badge variant="destructive">Low Stock</Badge>
                          ) : (
-                           <span className="bg-green-100 text-green-800 px-2 py-1 rounded text-xs">OK</span>
+                           <Badge variant="success">OK</Badge>
                          )}
-                      </td>
-                    </tr>
+                      </TableCell>
+                    </TableRow>
                   );
                 })}
                 {stocks.length === 0 && (
-                  <tr><td colSpan={5} className="p-4 text-center text-gray-500">No stock records found</td></tr>
+                  <TableRow><TableCell colSpan={5} className="text-center text-zinc-500 uppercase font-bold py-8">No stock records found</TableCell></TableRow>
                 )}
-              </tbody>
-            </table>
+              </TableBody>
+            </Table>
           </div>
         </div>
       )}
 
       {viewMode === 'HISTORY' && (
-        <div className="bg-white p-6 rounded shadow">
-          <h2 className="text-xl font-bold mb-4">Stock Movement History</h2>
+        <div className="bg-white">
+          <h2 className="text-xl font-black uppercase p-4 border-b-2 border-black bg-zinc-50">Stock Movement History</h2>
           <div className="overflow-x-auto">
-            <table className="min-w-full text-left">
-              <thead>
-                <tr className="border-b bg-gray-50">
-                  <th className="p-2">Date</th>
-                  <th className="p-2">Type</th>
-                  <th className="p-2">Product</th>
-                  <th className="p-2">Qty</th>
-                  <th className="p-2">Reason</th>
-                  <th className="p-2">User</th>
-                </tr>
-              </thead>
-              <tbody>
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Date</TableHead>
+                  <TableHead>Type</TableHead>
+                  <TableHead>Product</TableHead>
+                  <TableHead>Qty</TableHead>
+                  <TableHead>Reason</TableHead>
+                  <TableHead>User</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
                 {history.map((h: any) => (
-                  <tr key={h.id} className="border-b hover:bg-gray-50">
-                    <td className="p-2">{new Date(h.createdAt).toLocaleString()}</td>
-                    <td className="p-2">
-                      <span className={`px-2 py-1 rounded text-xs ${
-                        h.type === 'SALE' ? 'bg-green-100 text-green-800' :
-                        h.type === 'REFUND' ? 'bg-yellow-100 text-yellow-800' :
-                        'bg-gray-100 text-gray-800'
-                      }`}>
+                  <TableRow key={h.id}>
+                    <TableCell>{new Date(h.createdAt).toLocaleString()}</TableCell>
+                    <TableCell>
+                      <Badge variant={
+                          h.type === 'SALE' ? 'success' : 
+                          h.type === 'REFUND' ? 'warning' : 'outline'
+                      }>
                         {h.type}
-                      </span>
-                    </td>
-                    <td className="p-2">{h.sku?.product?.name} ({h.sku?.name || h.sku?.barcode})</td>
-                    <td className="p-2 font-mono">{h.qty > 0 ? '+' + h.qty : h.qty}</td>
-                    <td className="p-2">{h.reason || '-'}</td>
-                    <td className="p-2">{h.userId || 'System'}</td>
-                  </tr>
+                      </Badge>
+                    </TableCell>
+                    <TableCell className="uppercase font-bold text-xs">{h.sku?.product?.name} ({h.sku?.name || h.sku?.barcode})</TableCell>
+                    <TableCell className="font-mono">{h.qty > 0 ? '+' + h.qty : h.qty}</TableCell>
+                    <TableCell className="uppercase text-xs">{h.reason || '-'}</TableCell>
+                    <TableCell className="font-mono text-xs text-zinc-500">{h.userId || 'SYSTEM'}</TableCell>
+                  </TableRow>
                 ))}
-              </tbody>
-            </table>
+              </TableBody>
+            </Table>
           </div>
         </div>
       )}
