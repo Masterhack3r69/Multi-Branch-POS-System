@@ -1,20 +1,20 @@
-import { Request, Response } from 'express';
-import { prisma } from '../utils/prisma';
-import bcrypt from 'bcryptjs';
-import { z } from 'zod'; // Assuming zod is used for validation
+import { Request, Response } from "express";
+import { prisma } from "../utils/prisma";
+import bcrypt from "bcryptjs";
+import { z } from "zod"; // Assuming zod is used for validation
 
 // Validation Schemas
 const createUserSchema = z.object({
   email: z.string().email(),
   password: z.string().min(6),
   name: z.string().min(2),
-  role: z.enum(['ADMIN', 'MANAGER', 'CASHIER']),
+  role: z.enum(["ADMIN", "MANAGER", "CASHIER"]),
   branchId: z.string().optional().nullable(),
 });
 
 const updateUserSchema = z.object({
   name: z.string().min(2).optional(),
-  role: z.enum(['ADMIN', 'MANAGER', 'CASHIER']).optional(),
+  role: z.enum(["ADMIN", "MANAGER", "CASHIER"]).optional(),
   branchId: z.string().optional().nullable(),
   password: z.string().min(6).optional(), // Optional password update
 });
@@ -36,16 +36,16 @@ export const getAllUsers = async (req: Request, res: Response) => {
         branch: {
           select: {
             name: true,
-            code: true
-          }
-        }
+            code: true,
+          },
+        },
       },
-      orderBy: { createdAt: 'desc' }
+      orderBy: { createdAt: "desc" },
     });
     res.json(users);
   } catch (error) {
-    console.error('Error fetching users:', error);
-    res.status(500).json({ message: 'Error fetching users' });
+    console.error("Error fetching users:", error);
+    res.status(500).json({ message: "Error fetching users" });
   }
 };
 
@@ -55,9 +55,16 @@ export const createUser = async (req: Request, res: Response) => {
     const data = createUserSchema.parse(req.body);
 
     // Check if email exists
-    const existing = await prisma.user.findUnique({ where: { email: data.email } });
+    const existing = await prisma.user.findUnique({
+      where: { email: data.email },
+    });
     if (existing) {
-      return res.status(400).json({ message: 'Email already exists' });
+      return res.status(400).json({ message: "Email already exists" });
+    }
+
+    // Handle empty string for branchId
+    if (data.branchId === "") {
+      data.branchId = null;
     }
 
     const hashedPassword = await bcrypt.hash(data.password, 10);
@@ -66,7 +73,7 @@ export const createUser = async (req: Request, res: Response) => {
       data: {
         ...data,
         password: hashedPassword,
-        active: true
+        active: true,
       },
       select: {
         id: true,
@@ -74,8 +81,8 @@ export const createUser = async (req: Request, res: Response) => {
         name: true,
         role: true,
         branchId: true,
-        active: true
-      }
+        active: true,
+      },
     });
 
     res.status(201).json(user);
@@ -83,8 +90,8 @@ export const createUser = async (req: Request, res: Response) => {
     if (error instanceof z.ZodError) {
       return res.status(400).json({ errors: error.errors });
     }
-    console.error('Error creating user:', error);
-    res.status(500).json({ message: 'Error creating user' });
+    console.error("Error creating user:", error);
+    res.status(500).json({ message: "Error creating user" });
   }
 };
 
@@ -95,6 +102,12 @@ export const updateUser = async (req: Request, res: Response) => {
     const data = updateUserSchema.parse(req.body);
 
     const updateData: any = { ...data };
+
+    // Handle empty string for branchId
+    if (updateData.branchId === "") {
+      updateData.branchId = null;
+    }
+
     if (data.password) {
       updateData.password = await bcrypt.hash(data.password, 10);
     }
@@ -108,8 +121,8 @@ export const updateUser = async (req: Request, res: Response) => {
         name: true,
         role: true,
         branchId: true,
-        active: true
-      }
+        active: true,
+      },
     });
 
     res.json(user);
@@ -117,8 +130,8 @@ export const updateUser = async (req: Request, res: Response) => {
     if (error instanceof z.ZodError) {
       return res.status(400).json({ errors: error.errors });
     }
-    console.error('Error updating user:', error);
-    res.status(500).json({ message: 'Error updating user' });
+    console.error("Error updating user:", error);
+    res.status(500).json({ message: "Error updating user" });
   }
 };
 
@@ -127,24 +140,26 @@ export const toggleUserStatus = async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
     const { active } = req.body; // Expect explicit state or toggle? Let's check impl plan.
-    
+
     // If body has 'active' boolean, use it. Otherwise toggle.
     // Simplifying: Let's fetch current and toggle.
-    
-    const currentUser = await prisma.user.findUnique({ where: { id } });
-    if (!currentUser) return res.status(404).json({ message: 'User not found' });
 
-    const newStatus = typeof active === 'boolean' ? active : !currentUser.active;
+    const currentUser = await prisma.user.findUnique({ where: { id } });
+    if (!currentUser)
+      return res.status(404).json({ message: "User not found" });
+
+    const newStatus =
+      typeof active === "boolean" ? active : !currentUser.active;
 
     const user = await prisma.user.update({
       where: { id },
       data: { active: newStatus },
-      select: { id: true, active: true }
+      select: { id: true, active: true },
     });
 
     res.json(user);
   } catch (error) {
-    console.error('Error toggling user status:', error);
-    res.status(500).json({ message: 'Error updating user status' });
+    console.error("Error toggling user status:", error);
+    res.status(500).json({ message: "Error updating user status" });
   }
 };
