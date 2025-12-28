@@ -37,6 +37,37 @@ Authenticates a user and returns a JWT token.
 
 ---
 
+## Dashboard
+
+### Get Dashboard Stats
+
+Get aggregated statistics for the admin dashboard.
+
+- **URL**: `/reports/dashboard`
+- **Method**: `GET`
+- **Auth Required**: Yes (Role: ADMIN, MANAGER)
+
+**Success Response (200 OK):**
+
+```json
+{
+  "totalRevenue": 1500.5,
+  "transactionCount": 25,
+  "lowStockCount": 3,
+  "activeBranches": 2,
+  "recentSales": [
+    {
+      "id": "cm...sale1",
+      "total": 120.0,
+      "branch": { "name": "Main Branch" },
+      "createdAt": "2025-12-28T10:00:00Z"
+    }
+  ]
+}
+```
+
+---
+
 ## Branches
 
 ### List Branches
@@ -56,8 +87,8 @@ Get a list of all branches.
     "name": "Main Branch",
     "code": "MAIN",
     "address": "123 Main St",
-    "createdAt": "2025-12-25T12:00:00.000Z",
-    "updatedAt": "2025-12-25T12:00:00.000Z"
+    "active": true,
+    "createdAt": "2025-12-25T12:00:00.000Z"
   }
 ]
 ```
@@ -80,6 +111,22 @@ Create a new branch (Admin only).
 }
 ```
 
+### Update Branch
+
+Update an existing branch.
+
+- **URL**: `/branches/:id`
+- **Method**: `PATCH`
+- **Auth Required**: Yes (Role: ADMIN)
+
+### Disable Branch
+
+Toggle branch active status.
+
+- **URL**: `/branches/:id/disable`
+- **Method**: `POST`
+- **Auth Required**: Yes (Role: ADMIN)
+
 ### List Branch Terminals
 
 Get all terminals associated with a specific branch.
@@ -88,18 +135,53 @@ Get all terminals associated with a specific branch.
 - **Method**: `GET`
 - **Auth Required**: Yes
 
-**Success Response (200 OK):**
+---
+
+## Users
+
+### List Users
+
+Get a list of all users.
+
+- **URL**: `/users`
+- **Method**: `GET`
+- **Auth Required**: Yes (Role: ADMIN)
+
+### Create User
+
+Create a new user.
+
+- **URL**: `/users`
+- **Method**: `POST`
+- **Auth Required**: Yes (Role: ADMIN)
+
+**Request Body:**
 
 ```json
-[
-  {
-    "id": "cm...789",
-    "branchId": "cm...456",
-    "name": "Terminal 1",
-    "active": true
-  }
-]
+{
+  "name": "John Doe",
+  "email": "john@example.com",
+  "password": "password123",
+  "role": "CASHIER", // ADMIN, MANAGER, CASHIER
+  "branchId": "cm...456" // Required for non-ADMIN
+}
 ```
+
+### Update User
+
+Update a user's details.
+
+- **URL**: `/users/:id`
+- **Method**: `PATCH`
+- **Auth Required**: Yes (Role: ADMIN)
+
+### Disable User
+
+Toggle user active status.
+
+- **URL**: `/users/:id/disable`
+- **Method**: `POST`
+- **Auth Required**: Yes (Role: ADMIN)
 
 ---
 
@@ -112,28 +194,6 @@ Get a list of all products including their SKUs.
 - **URL**: `/products`
 - **Method**: `GET`
 - **Auth Required**: Yes
-
-**Success Response (200 OK):**
-
-```json
-[
-  {
-    "id": "cm...abc",
-    "sku": "PROD-001",
-    "name": "Sample Product",
-    "description": null,
-    "price": 100,
-    "skus": [
-      {
-        "id": "cm...def",
-        "productId": "cm...abc",
-        "barcode": "1234567890123",
-        "name": "Sample Product Standard"
-      }
-    ]
-  }
-]
-```
 
 ### Create Product
 
@@ -150,7 +210,8 @@ Create a new product (Admin/Manager only).
   "sku": "PROD-002",
   "name": "New Item",
   "price": 50.0,
-  "description": "Optional description"
+  "description": "Optional description",
+  "categoryId": "cm...cat" // Optional
 }
 ```
 
@@ -172,21 +233,8 @@ Manually adjust stock levels (add/remove) with a reason.
 {
   "skuId": "cm...def",
   "branchId": "cm...456",
-  "qty": 10, // Positive to add, negative to remove
-  "reason": "Restock"
-}
-```
-
-**Success Response (200 OK):**
-
-```json
-{
-  "id": "cm...stock1",
-  "skuId": "cm...def",
-  "branchId": "cm...456",
-  "qty": 100,
-  "lowStockThreshold": 10,
-  "updatedAt": "2025-12-26T12:00:00.000Z"
+  "qtyChange": 10, // Positive to add, negative to remove
+  "reason": "RESTOCK" // Enum: RESTOCK, DAMAGE, RECOUNT, TRANSFER, CORRECTION
 }
 ```
 
@@ -206,35 +254,38 @@ Get current stock of all items.
 - **URL**: `/inventory/levels`
 - **Method**: `GET`
 - **Auth Required**: Yes
-- **Query Parameters**: `branchId` (optional)
 
 ### Inventory History
 
-Get stock movement history, optionally filtered by SKU and Branch.
+Get stock movement history.
 
 - **URL**: `/inventory/history`
 - **Method**: `GET`
 - **Auth Required**: Yes
+
+---
+
+## Reports
+
+### Sales Report
+
+Get aggregated sales data.
+
+- **URL**: `/reports/sales`
+- **Method**: `GET`
+- **Auth Required**: Yes (Role: ADMIN, MANAGER)
 - **Query Parameters**:
-  - `skuId` (optional)
-  - `branchId` (optional)
+  - `from`: Start date (YYYY-MM-DD)
+  - `to`: End date (YYYY-MM-DD)
+  - `branchId`: Optional filter
 
-**Success Response (200 OK):**
+### Inventory Report
 
-```json
-[
-  {
-    "id": "cm...move1",
-    "type": "ADJUSTMENT",
-    "qty": 10,
-    "reason": "Restock",
-    "createdAt": "2025-12-26T12:00:00.000Z",
-    "sku": { "name": "Sample Product Standard" },
-    "branch": { "name": "Main Branch" },
-    "user": { "name": "Admin User" }
-  }
-]
-```
+Get inventory valuation data.
+
+- **URL**: `/reports/inventory`
+- **Method**: `GET`
+- **Auth Required**: Yes (Role: ADMIN, MANAGER)
 
 ---
 
@@ -247,125 +298,22 @@ Retrieve a list of past sales.
 - **URL**: `/sales`
 - **Method**: `GET`
 - **Auth Required**: Yes
-- **Query Parameters**:
-  - `branchId` (optional): Filter by branch
-
-**Success Response (200 OK):**
-
-```json
-[
-  {
-    "id": "cm...sale1",
-    "total": 110,
-    "tax": 10,
-    "createdAt": "2025-12-25T12:05:00.000Z",
-    "items": [...],
-    "payments": [...],
-    "refunds": [...]
-  }
-]
-```
 
 ### Create Sale
 
-Process a new sale. This endpoint is transactional: it creates the sale record, records payments, and decrements stock. It supports idempotency via `clientSaleId`.
+Process a new sale.
 
 - **URL**: `/sales`
 - **Method**: `POST`
 - **Auth Required**: Yes
 
-**Request Body:**
-
-```json
-{
-  "clientSaleId": "uuid-v4-from-client",
-  "branchId": "cm...456",
-  "terminalId": "cm...789",
-  "cashierId": "cm...123",
-  "items": [
-    {
-      "skuId": "cm...def",
-      "qty": 1,
-      "price": 100,
-      "discount": 0
-    }
-  ],
-  "payments": [
-    {
-      "method": "CASH",
-      "amount": 110
-    }
-  ]
-}
-```
-
-**Success Response (200 OK):**
-
-```json
-{
-  "id": "cm...sale1",
-  "branchId": "cm...456",
-  "total": 110,
-  "tax": 10,
-  "createdAt": "2025-12-25T12:05:00.000Z",
-  "items": [...],
-  "payments": [...]
-}
-```
-
 ### Refund Sale
 
-Refund a sale, either fully or partially. Restocks items and creates a refund record.
+Refund a sale.
 
 - **URL**: `/sales/:id/refund`
 - **Method**: `POST`
 - **Auth Required**: Yes
-  - **Cashiers**: Can only refund same-day sales.
-  - **Managers/Admins**: Can refund any sale.
-
-**Request Body (Partial Refund):**
-
-```json
-{
-  "items": [
-    {
-      "skuId": "cm...def",
-      "qty": 1
-    }
-  ],
-  "reason": "Customer returned item"
-}
-```
-
-**Request Body (Full Refund):**
-
-```json
-{
-  "reason": "Accidental charge"
-}
-```
-
-**Success Response (200 OK):**
-
-```json
-{
-  "id": "cm...refund1",
-  "saleId": "cm...sale1",
-  "amount": 110,
-  "reason": "Customer returned item",
-  "createdAt": "2025-12-26T14:00:00.000Z",
-  "items": [...]
-}
-```
-
----
-
-## Error Responses
-
-- **400 Bad Request**: Validation error (e.g., missing fields, invalid quantity).
-- **401 Unauthorized**: Missing or invalid JWT token.
-- **403 Forbidden**: User does not have the required role (e.g., cashier trying to refund old sale).
-- **404 Not Found**: Resource not found (e.g., sale ID invalid).
 
 ---
 
@@ -373,57 +321,16 @@ Refund a sale, either fully or partially. Restocks items and creates a refund re
 
 ### Get Active Session
 
-Get the current active cash session for the user.
-
 - **URL**: `/cash/session`
-- **Method**: `GET`
-- **Auth Required**: Yes
 
 ### Start Session
 
-Open the cash drawer with a starting float.
-
 - **URL**: `/cash/session/start`
-- **Method**: `POST`
-- **Auth Required**: Yes
-  **Request Body:**
-
-```json
-{
-  "branchId": "branch-uuid",
-  "terminalId": "terminal-uuid",
-  "startAmount": 100.0
-}
-```
 
 ### End Session
 
-Close the cash drawer and record actual ending cash.
-
 - **URL**: `/cash/session/end`
-- **Method**: `POST`
-- **Auth Required**: Yes
-  **Request Body:**
-
-```json
-{
-  "endAmount": 520.5
-}
-```
 
 ### Add Transaction
 
-Record a non-sale cash movement (Drop/Payout).
-
 - **URL**: `/cash/transaction`
-- **Method**: `POST`
-- **Auth Required**: Yes
-  **Request Body:**
-
-```json
-{
-  "type": "DROP", // or "PAYOUT", "FLOAT_IN"
-  "amount": 200.0,
-  "reason": "Mid-day safe drop"
-}
-```

@@ -96,3 +96,75 @@ export const getInventoryReport = async (req: Request, res: Response) => {
     res.status(500).json({ message: 'Error fetching inventory report' }); 
   }
 };
+
+export const getDashboardStats = async (req: Request, res: Response) => {
+  try {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+
+    // 1. Sales Stats for Today
+    const salesAgg = await prisma.sale.aggregate({
+      where: {
+        createdAt: {
+          gte: today,
+        },
+      },
+      _sum: { total: true },
+      _count: { id: true },
+    });
+
+    // 2. Low Stock Count (Overall)
+    const lowStockCount = await prisma.stock.count({
+      where: {
+        qty: { lte: 10 }, // Simplification: using fixed threshold or check db logic if per-item threshold available?
+        // Actually, prisma count doesn't support comparing two columns (qty <= lowStockThreshold) directly in `where` easily.
+        // For MVP, we'll fetch all stocks and filter in memory or use a raw query.
+        // BUT, getInventoryReport did it in memory. Let's stick to memory for consistency/speed on small datasets,
+        // OR better: standard threshold for count query if field comparison is hard.
+        // Wait, schema has `lowStockThreshold Int @default(10)`.
+        // Prisma doesn't support `qty: { lte: prisma.stock.fields.lowStockThreshold }` yet.
+        // Let's use raw query for performance or in-memory.
+        // Given constraint, let's just fetch all like inventory report or use a fixed number if acceptable? 
+        // User asked for "Real data". I will reuse the logic from getInventoryReport but optimized if possible.
+        // Actually, let's just fetch all stocks. It's MVP.
+      }
+    });
+    
+    // Efficient Low Stock Count attempt (using JS filter is safer for now without raw query complexity issues)
+    const allStocks = await prisma.stock.findMany({ select: { qty: true, lowStockThreshold: true } });
+    const lowStock = allStocks.filter(s => s.qty <= s.lowStockThreshold).length;
+
+
+    // 3. Active Branches
+    const activeBranches = await prisma.branch.count({
+      where: { active: true }
+    });
+
+    // 4. Total Products
+    const totalProducts = await prisma.product.count();
+
+    // 5. Total Users
+    const totalUsers = await prisma.user.count();
+
+    // 4. Recent Sales
+    const recentSales = await prisma.sale.findMany({
+      take: 5,
+      orderBy: { createdAt: 'desc' },
+      // Schema doesn't have relations on Sale for branch/cashier yet, so skipping include
+    });
+
+    res.json({
+      totalRevenue: salesAgg._sum.total || 0,
+      transactionCount: salesAgg._count.id || 0,
+      lowStockCount: lowStock,
+      activeBranches,
+      recentSales,
+      totalProducts,
+      totalUsers
+    });
+
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ message: 'Error fetching dashboard stats' });
+  }
+};

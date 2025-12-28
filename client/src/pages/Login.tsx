@@ -15,7 +15,12 @@ export function Login() {
     try {
       const res = await api.post('/auth/login', { email, password });
       setAuth(res.data.user, res.data.token);
-      navigate('/');
+      
+      if (res.data.user.role === 'ADMIN') {
+        navigate('/dashboard');
+      } else {
+        navigate('/');
+      }
     } catch (err: any) {
       setError(err.response?.data?.message || 'Login failed');
     }

@@ -7,7 +7,8 @@ import { Inventory } from '@/pages/Inventory';
 import { SalesHistory } from '@/pages/SalesHistory';
 import { Users } from '@/pages/Users';
 import { Branches } from '@/pages/Branches';
-
+import { Dashboard } from '@/pages/Dashboard';
+import { Reports } from '@/pages/Reports';
 import { Products } from '@/pages/Products';
 
 
@@ -30,11 +31,13 @@ function App() {
           }
         >
           <Route index element={<POSTerminal />} />
+          <Route path="dashboard" element={<Dashboard />} />
           <Route path="sales" element={<SalesHistory />} />
           <Route path="products" element={<Products />} />
           <Route path="inventory" element={<Inventory />} />
           <Route path="users" element={<Users />} />
           <Route path="branches" element={<Branches />} />
+          <Route path="reports" element={<Reports />} />
         </Route>
       </Routes>
     </Router>

@@ -1,8 +1,16 @@
-import { Link, Outlet } from 'react-router-dom';
+import { Link, Outlet, useLocation } from 'react-router-dom';
 import { useAuthStore } from '@/store/authStore';
 
 export function MainLayout() {
   const { user, logout } = useAuthStore();
+  const location = useLocation();
+
+  const getLinkClass = (path: string) => {
+    const isActive = location.pathname === path;
+    return isActive 
+        ? "bg-black text-white px-2 py-1 transition-colors" 
+        : "text-zinc-400 hover:text-black hover:bg-black/5 px-2 py-1 transition-colors";
+  };
 
   return (
     <div className="min-h-screen bg-white font-mono text-zinc-900 flex flex-col">
@@ -11,18 +19,21 @@ export function MainLayout() {
           <div className="flex items-center gap-8">
               <div className="font-black text-xl tracking-tighter uppercase">POS.SYSTEM</div>
               <div className="hidden md:flex gap-6 text-sm font-bold uppercase tracking-wide">
-                  <Link to="/" className="hover:bg-black hover:text-white px-2 py-1 transition-colors">Terminal</Link>
-                  <Link to="/sales" className="text-zinc-400 hover:text-black hover:bg-black/5 px-2 py-1 transition-colors">Sales</Link>
+                  {user?.role === 'ADMIN' && (
+                      <Link to="/dashboard" className={getLinkClass('/dashboard')}>Dashboard</Link>
+                  )}
+                  <Link to="/" className={getLinkClass('/')}>Terminal</Link>
+                  <Link to="/sales" className={getLinkClass('/sales')}>Sales</Link>
                   {['ADMIN', 'MANAGER'].includes(user?.role || '') && (
                     <>
-                      <Link to="/products" className="text-zinc-400 hover:text-black hover:bg-black/5 px-2 py-1 transition-colors">Products</Link>
-                      <Link to="/inventory" className="text-zinc-400 hover:text-black hover:bg-black/5 px-2 py-1 transition-colors">Inventory</Link>
+                      <Link to="/products" className={getLinkClass('/products')}>Products</Link>
+                      <Link to="/inventory" className={getLinkClass('/inventory')}>Inventory</Link>
                     </>
                   )}
                   {user?.role === 'ADMIN' && (
                      <>
-                        <Link to="/users" className="text-zinc-400 hover:text-black hover:bg-black/5 px-2 py-1 transition-colors">Users</Link>
-                        <Link to="/branches" className="text-zinc-400 hover:text-black hover:bg-black/5 px-2 py-1 transition-colors">Branches</Link>
+                        <Link to="/users" className={getLinkClass('/users')}>Users</Link>
+                        <Link to="/branches" className={getLinkClass('/branches')}>Branches</Link>
                      </>
                   )}
               </div>
