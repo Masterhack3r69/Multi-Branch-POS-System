@@ -2,6 +2,10 @@
 
 Base URL: `http://localhost:3000/api`
 
+## Common Response Headers
+
+- `Authorization: Bearer <JWT_TOKEN>` (Required for protected routes)
+
 ## Authentication
 
 ### Login
@@ -37,37 +41,6 @@ Authenticates a user and returns a JWT token.
 
 ---
 
-## Dashboard
-
-### Get Dashboard Stats
-
-Get aggregated statistics for the admin dashboard.
-
-- **URL**: `/reports/dashboard`
-- **Method**: `GET`
-- **Auth Required**: Yes (Role: ADMIN, MANAGER)
-
-**Success Response (200 OK):**
-
-```json
-{
-  "totalRevenue": 1500.5,
-  "transactionCount": 25,
-  "lowStockCount": 3,
-  "activeBranches": 2,
-  "recentSales": [
-    {
-      "id": "cm...sale1",
-      "total": 120.0,
-      "branch": { "name": "Main Branch" },
-      "createdAt": "2025-12-28T10:00:00Z"
-    }
-  ]
-}
-```
-
----
-
 ## Branches
 
 ### List Branches
@@ -78,24 +51,9 @@ Get a list of all branches.
 - **Method**: `GET`
 - **Auth Required**: Yes
 
-**Success Response (200 OK):**
-
-```json
-[
-  {
-    "id": "cm...456",
-    "name": "Main Branch",
-    "code": "MAIN",
-    "address": "123 Main St",
-    "active": true,
-    "createdAt": "2025-12-25T12:00:00.000Z"
-  }
-]
-```
-
 ### Create Branch
 
-Create a new branch (Admin only).
+Create a new branch and an initial terminal (Admin only).
 
 - **URL**: `/branches`
 - **Method**: `POST`
@@ -119,9 +77,20 @@ Update an existing branch.
 - **Method**: `PATCH`
 - **Auth Required**: Yes (Role: ADMIN)
 
+**Request Body:**
+
+```json
+{
+  "name": "Updated Name",
+  "code": "UPDT",
+  "address": "New Address",
+  "active": true
+}
+```
+
 ### Disable Branch
 
-Toggle branch active status.
+Toggle branch active status to false.
 
 - **URL**: `/branches/:id/disable`
 - **Method**: `POST`
@@ -141,7 +110,7 @@ Get all terminals associated with a specific branch.
 
 ### List Users
 
-Get a list of all users.
+Get a list of all users with branch details.
 
 - **URL**: `/users`
 - **Method**: `GET`
@@ -163,7 +132,7 @@ Create a new user.
   "email": "john@example.com",
   "password": "password123",
   "role": "CASHIER", // ADMIN, MANAGER, CASHIER
-  "branchId": "cm...456" // Required for non-ADMIN
+  "branchId": "cm...456" // Required for non-ADMIN, null for ADMIN
 }
 ```
 
@@ -175,7 +144,18 @@ Update a user's details.
 - **Method**: `PATCH`
 - **Auth Required**: Yes (Role: ADMIN)
 
-### Disable User
+**Request Body:**
+
+```json
+{
+  "name": "New Name",
+  "role": "MANAGER",
+  "branchId": "cm...abc",
+  "password": "newpassword123" // Optional
+}
+```
+
+### Toggle User Status
 
 Toggle user active status.
 
@@ -183,13 +163,21 @@ Toggle user active status.
 - **Method**: `POST`
 - **Auth Required**: Yes (Role: ADMIN)
 
+**Request Body (Optional):**
+
+```json
+{
+  "active": true // If provided, sets to this value. Otherwise toggles.
+}
+```
+
 ---
 
 ## Products
 
 ### List Products
 
-Get a list of all products including their SKUs.
+Get a list of all active products including their SKUs.
 
 - **URL**: `/products`
 - **Method**: `GET`
@@ -197,7 +185,7 @@ Get a list of all products including their SKUs.
 
 ### Create Product
 
-Create a new product (Admin/Manager only).
+Create a new product and a default SKU (Admin/Manager only).
 
 - **URL**: `/products`
 - **Method**: `POST`
@@ -210,8 +198,26 @@ Create a new product (Admin/Manager only).
   "sku": "PROD-002",
   "name": "New Item",
   "price": 50.0,
-  "description": "Optional description",
-  "categoryId": "cm...cat" // Optional
+  "description": "Optional description"
+}
+```
+
+### Update Product
+
+Update product details.
+
+- **URL**: `/products/:id`
+- **Method**: `PATCH`
+- **Auth Required**: Yes (Role: ADMIN, MANAGER)
+
+**Request Body:**
+
+```json
+{
+  "name": "Updated Name",
+  "price": 55.0,
+  "description": "New description",
+  "active": true
 }
 ```
 
@@ -221,11 +227,11 @@ Create a new product (Admin/Manager only).
 
 ### Adjust Inventory
 
-Manually adjust stock levels (add/remove) with a reason.
+Manually adjust stock levels with a reason.
 
 - **URL**: `/inventory/adjust`
 - **Method**: `POST`
-- **Auth Required**: Yes
+- **Auth Required**: Yes (Role: ADMIN, MANAGER)
 
 **Request Body:**
 
@@ -234,9 +240,19 @@ Manually adjust stock levels (add/remove) with a reason.
   "skuId": "cm...def",
   "branchId": "cm...456",
   "qtyChange": 10, // Positive to add, negative to remove
-  "reason": "RESTOCK" // Enum: RESTOCK, DAMAGE, RECOUNT, TRANSFER, CORRECTION
+  "reason": "RESTOCK" // RESTOCK, DAMAGE, RECOUNT, TRANSFER, CORRECTION
 }
 ```
+
+### Get Stock Levels
+
+Get current stock of all items. Filters by user's branch if not ADMIN.
+
+- **URL**: `/inventory/levels`
+- **Method**: `GET`
+- **Auth Required**: Yes
+- **Query Parameters**:
+  - `branchId`: Optional (for ADMIN to see specific branch)
 
 ### Get Low Stock
 
@@ -245,47 +261,19 @@ Get items where quantity is below threshold.
 - **URL**: `/inventory/low-stock`
 - **Method**: `GET`
 - **Auth Required**: Yes
-- **Query Parameters**: `branchId` (optional)
-
-### Get Stock Levels
-
-Get current stock of all items.
-
-- **URL**: `/inventory/levels`
-- **Method**: `GET`
-- **Auth Required**: Yes
+- **Query Parameters**:
+  - `branchId`: Optional
 
 ### Inventory History
 
-Get stock movement history.
+Get stock movement history (Last 100 movements).
 
 - **URL**: `/inventory/history`
 - **Method**: `GET`
-- **Auth Required**: Yes
-
----
-
-## Reports
-
-### Sales Report
-
-Get aggregated sales data.
-
-- **URL**: `/reports/sales`
-- **Method**: `GET`
 - **Auth Required**: Yes (Role: ADMIN, MANAGER)
 - **Query Parameters**:
-  - `from`: Start date (YYYY-MM-DD)
-  - `to`: End date (YYYY-MM-DD)
+  - `skuId`: Optional filter
   - `branchId`: Optional filter
-
-### Inventory Report
-
-Get inventory valuation data.
-
-- **URL**: `/reports/inventory`
-- **Method**: `GET`
-- **Auth Required**: Yes (Role: ADMIN, MANAGER)
 
 ---
 
@@ -293,27 +281,73 @@ Get inventory valuation data.
 
 ### Get Sales History
 
-Retrieve a list of past sales.
+Retrieve a list of past sales (Last 50).
 
 - **URL**: `/sales`
 - **Method**: `GET`
 - **Auth Required**: Yes
+- **Query Parameters**:
+  - `branchId`: Filter by branch
+  - `cashierId`: Filter by cashier
+  - `terminalId`: Filter by terminal
+  - `from`: Start date (YYYY-MM-DD)
+  - `to`: End date (YYYY-MM-DD)
 
 ### Create Sale
 
-Process a new sale.
+Process a new sale and update stock levels.
 
 - **URL**: `/sales`
 - **Method**: `POST`
 - **Auth Required**: Yes
 
+**Request Body:**
+
+```json
+{
+  "branchId": "cm...",
+  "terminalId": "cm...",
+  "cashierId": "cm...",
+  "items": [
+    {
+      "skuId": "cm...",
+      "qty": 2,
+      "price": 25.0,
+      "discount": 0
+    }
+  ],
+  "payments": [
+    {
+      "method": "CASH", // CASH, CARD
+      "amount": 50.0
+    }
+  ]
+}
+```
+
 ### Refund Sale
 
-Refund a sale.
+Refund a sale (full or partial).
 
 - **URL**: `/sales/:id/refund`
 - **Method**: `POST`
 - **Auth Required**: Yes
+- **Note**: Cashiers can only refund same-day sales.
+
+**Request Body:**
+
+```json
+{
+  "items": [
+    // Optional, if omitted = full refund
+    {
+      "skuId": "cm...",
+      "qty": 1
+    }
+  ],
+  "reason": "Customer returned"
+}
+```
 
 ---
 
@@ -321,16 +355,95 @@ Refund a sale.
 
 ### Get Active Session
 
+Get the current active cash session for the logged-in user.
+
 - **URL**: `/cash/session`
+- **Method**: `GET`
+- **Auth Required**: Yes
 
 ### Start Session
 
+Open a new cash session.
+
 - **URL**: `/cash/session/start`
+- **Method**: `POST`
+- **Auth Required**: Yes
+
+**Request Body:**
+
+```json
+{
+  "branchId": "cm...",
+  "terminalId": "cm...",
+  "startAmount": 100.0
+}
+```
 
 ### End Session
 
+Close the current active cash session.
+
 - **URL**: `/cash/session/end`
+- **Method**: `POST`
+- **Auth Required**: Yes
+
+**Request Body:**
+
+```json
+{
+  "endAmount": 150.0
+}
+```
 
 ### Add Transaction
 
+Record a cash movement (Float In, Drop, Payout).
+
 - **URL**: `/cash/transaction`
+- **Method**: `POST`
+- **Auth Required**: Yes
+
+**Request Body:**
+
+```json
+{
+  "type": "DROP", // FLOAT_IN, DROP, PAYOUT
+  "amount": 20.0,
+  "reason": "Moving excess cash to safe"
+}
+```
+
+---
+
+## Reports (Admin/Manager Only)
+
+### Dashboard Stats
+
+Get aggregated statistics for the dashboard.
+
+- **URL**: `/reports/dashboard`
+- **Method**: `GET`
+- **Auth Required**: Yes
+
+### Sales Report
+
+Get aggregated sales data with breakdown.
+
+- **URL**: `/reports/sales`
+- **Method**: `GET`
+- **Auth Required**: Yes
+- **Query Parameters**:
+  - `from`: Start date
+  - `to`: End date
+  - `branchId`: Filter by branch
+  - `groupBy`: 'branch' or 'user' (default: 'branch')
+
+### Inventory Report
+
+Get inventory valuation data.
+
+- **URL**: `/reports/inventory`
+- **Method**: `GET`
+- **Auth Required**: Yes
+- **Query Parameters**:
+  - `branchId`: Filter by branch
