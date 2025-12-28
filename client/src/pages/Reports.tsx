@@ -67,7 +67,7 @@ export function Reports() {
 
       {/* Filters */}
       <div className="bg-white p-4 rounded shadow flex flex-wrap gap-4 items-end">
-         <div>
+        <div>
             <label className="block text-sm font-medium">Branch</label>
             <select 
                 className="border p-2 rounded w-48"
@@ -79,9 +79,9 @@ export function Reports() {
                     <option key={b.id} value={b.id}>{b.name}</option>
                 ))}
             </select>
-         </div>
-         {activeTab === 'SALES' && (
-             <>
+        </div>
+        {activeTab === 'SALES' && (
+            <>
                 <div>
                     <label className="block text-sm font-medium">From</label>
                     <input 
@@ -100,8 +100,8 @@ export function Reports() {
                         onChange={(e) => setDateTo(e.target.value)}
                     />
                 </div>
-             </>
-         )}
+            </>
+        )}
       </div>
 
       {/* Tabs */}
