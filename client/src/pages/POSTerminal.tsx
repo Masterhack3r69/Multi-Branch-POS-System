@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { api } from '@/lib/api';
 import { useAuthStore } from '@/store/authStore';
 import { db } from '@/lib/db';
@@ -25,6 +26,7 @@ import { CloseSessionModal } from '@/components/CloseSessionModal';
 
 export function POSTerminal() {
   const { user, logout } = useAuthStore();
+  const navigate = useNavigate();
   const [sessionActive, setSessionActive] = useState(false);
   const [showCloseSession, setShowCloseSession] = useState(false);
   const [products, setProducts] = useState<Product[]>([]);
@@ -38,6 +40,12 @@ export function POSTerminal() {
   const [terminalId, setTerminalId] = useState<string>('');
 
   useEffect(() => {
+    // Redirect admin users away from terminal
+    if (user?.role === 'ADMIN') {
+      navigate('/dashboard');
+      return;
+    }
+    
     window.addEventListener('online', () => setOnline(true));
     window.addEventListener('offline', () => setOnline(false));
     
@@ -47,7 +55,7 @@ export function POSTerminal() {
         window.removeEventListener('online', () => setOnline(true));
         window.removeEventListener('offline', () => setOnline(false));
     };
-  }, [online]);
+  }, [online, user?.role, navigate]);
 
   useEffect(() => {
     if (branchId) {

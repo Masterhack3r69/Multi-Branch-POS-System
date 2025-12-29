@@ -22,7 +22,9 @@ export function MainLayout() {
                   {user?.role === 'ADMIN' && (
                       <Link to="/dashboard" className={getLinkClass('/dashboard')}>Dashboard</Link>
                   )}
-                  <Link to="/" className={getLinkClass('/')}>Terminal</Link>
+                  {user?.role !== 'ADMIN' && (
+                    <Link to="/" className={getLinkClass('/')}>Terminal</Link>
+                  )}
                   <Link to="/sales" className={getLinkClass('/sales')}>Sales</Link>
                   {['ADMIN', 'MANAGER'].includes(user?.role || '') && (
                     <>
