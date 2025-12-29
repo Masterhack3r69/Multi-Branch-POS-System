@@ -162,7 +162,7 @@ export function SalesHistory() {
       </div>
 
       {selectedSale && (
-        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4 z-50">
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4 z-9999">
           <div className="bg-white p-6 border-4 border-black shadow-[8px_8px_0px_0px_rgba(0,0,0,1)] max-w-2xl w-full max-h-[90vh] overflow-y-auto">
             <h2 className="text-xl font-black uppercase mb-4">Sale Details</h2>
             <div className="mb-6 grid grid-cols-3 gap-4 text-sm font-mono border-b-2 border-black pb-4">

@@ -71,7 +71,7 @@ export function CashSessionModal({ onSessionActive, onLogout, branchId, terminal
 
   if (step === 'LOADING') {
     return (
-      <div className="fixed inset-0 bg-gray-900 bg-opacity-90 flex items-center justify-center z-50 text-white">
+      <div className="fixed inset-0 bg-gray-900 bg-opacity-90 flex items-center justify-center z-9999 text-white">
         Checking Cash Drawer Status...
       </div>
     );
@@ -84,7 +84,7 @@ export function CashSessionModal({ onSessionActive, onLogout, branchId, terminal
   }
 
   return (
-    <div className="fixed inset-0 bg-gray-900 bg-opacity-90 flex items-center justify-center z-50">
+    <div className="fixed inset-0 bg-gray-900 bg-opacity-90 flex items-center justify-center z-9999">
       <div className="bg-white text-gray-900 p-8 rounded-lg shadow-xl max-w-md w-full">
         <h2 className="text-2xl font-bold mb-4">Open Cash Drawer</h2>
         <p className="mb-4 text-gray-600">A cash session must be started before making sales.</p>

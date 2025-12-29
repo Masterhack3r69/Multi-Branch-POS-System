@@ -176,7 +176,7 @@ export function Users() {
       </div>
 
       {showModal && (
-        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4 z-50">
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4 z-9999">
           <div className="bg-white p-6 border-4 border-black shadow-[8px_8px_0px_0px_rgba(0,0,0,1)] w-full max-w-md">
             <h2 className="text-xl font-black uppercase mb-6">{editingUser ? 'Edit User' : 'New User'}</h2>
             <form onSubmit={handleSubmit} className="space-y-4">
