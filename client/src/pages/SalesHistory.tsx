@@ -138,7 +138,7 @@ export function SalesHistory() {
                 <TableCell>{new Date(sale.createdAt).toLocaleString()}</TableCell>
                 <TableCell className="font-mono text-xs">{sale.id.slice(-8)}</TableCell>
                 <TableCell>${sale.total.toFixed(2)}</TableCell>
-                <TableCell>{sale.items.length} items</TableCell>
+                <TableCell>{sale.items.reduce((sum: number, item: any) => sum + item.qty, 0)} items</TableCell>
                 <TableCell>
                   {sale.refunds.length > 0 ? (
                     <Badge variant="destructive">Refunded</Badge>
