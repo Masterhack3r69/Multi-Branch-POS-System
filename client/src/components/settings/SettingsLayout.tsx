@@ -11,7 +11,6 @@ export function SettingsLayout({ children, activeTab, onTabChange }: SettingsLay
 
   const tabs = [
     { id: 'general', label: 'General', roles: ['ADMIN'] },
-    { id: 'profile', label: 'Profile', roles: ['ADMIN', 'MANAGER', 'CASHIER'] },
     { id: 'security', label: 'Security', roles: ['ADMIN', 'MANAGER', 'CASHIER'] },
     { id: 'about', label: 'About', roles: ['ADMIN', 'MANAGER', 'CASHIER'] },
     { id: 'guide', label: 'Guide', roles: ['ADMIN', 'MANAGER', 'CASHIER'] },

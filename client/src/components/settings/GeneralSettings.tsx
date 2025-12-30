@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Card } from '@/components/ui/Card';
 import { Input } from '@/components/ui/Input';
 
@@ -16,8 +16,11 @@ interface GeneralSetting {
 
 export function GeneralSettings() {
   const [settings, setSettings] = useState<GeneralSetting[]>([]);
+  const [formValues, setFormValues] = useState<Record<string, any>>({});
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
+  const debounceTimers = useRef<Record<string, NodeJS.Timeout>>({});
 
   useEffect(() => {
     fetchSettings();
@@ -27,9 +30,21 @@ export function GeneralSettings() {
     try {
       const { api } = await import('@/lib/api');
       const response = await api.get('/settings/general');
-      setSettings(response.data);
+      if (Array.isArray(response.data)) {
+        setSettings(response.data);
+        // Initialize form values
+        const values: Record<string, any> = {};
+        response.data.forEach(setting => {
+          values[setting.key] = setting.value;
+        });
+        setFormValues(values);
+      } else {
+        console.warn('Settings response is not an array:', response.data);
+        setSettings([]);
+      }
     } catch (error) {
       console.error('Error fetching settings:', error);
+      setSettings([]);
     } finally {
       setLoading(false);
     }
@@ -37,22 +52,37 @@ export function GeneralSettings() {
 
   const updateSetting = async (key: string, value: any) => {
     setSaving(true);
+    setMessage(null);
     try {
       const { api } = await import('@/lib/api');
-      const response = await api.patch(`/settings/${key}`, { value });
-      if (response.status === 200) {
-        fetchSettings(); // Refresh settings
-      }
-    } catch (error) {
+      await api.patch(`/settings/${key}`, { value });
+      setMessage({ type: 'success', text: `Setting updated successfully!` });
+      setTimeout(() => setMessage(null), 2000);
+    } catch (error: any) {
       console.error('Error updating setting:', error);
+      const errorMsg = error.response?.data?.message || error.message || 'Failed to update setting';
+      setMessage({ type: 'error', text: errorMsg });
     } finally {
       setSaving(false);
     }
   };
 
-  const getSettingValue = (key: string) => {
-    const setting = settings.find(s => s.key === key);
-    return setting ? setting.value : '';
+  const handleInputChange = (key: string, value: any) => {
+    // Update form value immediately for responsive UI
+    setFormValues(prev => ({
+      ...prev,
+      [key]: value
+    }));
+
+    // Clear existing timer
+    if (debounceTimers.current[key]) {
+      clearTimeout(debounceTimers.current[key]);
+    }
+
+    // Debounce API call - wait 1 second after user stops typing
+    debounceTimers.current[key] = setTimeout(() => {
+      updateSetting(key, value);
+    }, 1000);
   };
 
   if (loading) {
@@ -61,6 +91,16 @@ export function GeneralSettings() {
 
   return (
     <div className="space-y-6">
+      {message && (
+        <div className={`p-4 rounded border-2 ${
+          message.type === 'success' 
+            ? 'border-green-600 bg-green-50 text-green-700' 
+            : 'border-red-600 bg-red-50 text-red-700'
+        }`}>
+          {message.text}
+        </div>
+      )}
+      
       <Card className="p-6">
         <h2 className="text-lg font-bold uppercase tracking-wide mb-6">Company Information</h2>
         
@@ -70,8 +110,8 @@ export function GeneralSettings() {
               Company Name
             </label>
             <Input
-              value={getSettingValue('company_name')}
-              onChange={(e) => updateSetting('company_name', e.target.value)}
+              value={formValues['company_name'] || ''}
+              onChange={(e) => handleInputChange('company_name', e.target.value)}
               placeholder="Enter company name"
               disabled={saving}
             />
@@ -82,8 +122,8 @@ export function GeneralSettings() {
               Default Currency
             </label>
             <Input
-              value={getSettingValue('default_currency')}
-              onChange={(e) => updateSetting('default_currency', e.target.value)}
+              value={formValues['default_currency'] || ''}
+              onChange={(e) => handleInputChange('default_currency', e.target.value)}
               placeholder="USD"
               disabled={saving}
             />
@@ -102,8 +142,8 @@ export function GeneralSettings() {
             <Input
               type="number"
               step="0.01"
-              value={getSettingValue('tax_rate')}
-              onChange={(e) => updateSetting('tax_rate', parseFloat(e.target.value) || 0)}
+              value={formValues['tax_rate'] || ''}
+              onChange={(e) => handleInputChange('tax_rate', parseFloat(e.target.value) || 0)}
               placeholder="0.00"
               disabled={saving}
             />
@@ -115,8 +155,8 @@ export function GeneralSettings() {
             </label>
             <Input
               type="number"
-              value={getSettingValue('low_stock_threshold')}
-              onChange={(e) => updateSetting('low_stock_threshold', parseInt(e.target.value) || 10)}
+              value={formValues['low_stock_threshold'] || ''}
+              onChange={(e) => handleInputChange('low_stock_threshold', parseInt(e.target.value) || 10)}
               placeholder="10"
               disabled={saving}
             />
@@ -134,8 +174,8 @@ export function GeneralSettings() {
           <textarea
             className="w-full border-2 border-black p-3 font-mono text-sm focus:outline-none focus:bg-zinc-50"
             rows={3}
-            value={getSettingValue('receipt_footer')}
-            onChange={(e) => updateSetting('receipt_footer', e.target.value)}
+            value={formValues['receipt_footer'] || ''}
+            onChange={(e) => handleInputChange('receipt_footer', e.target.value)}
             placeholder="Thank you for your business!"
             disabled={saving}
           />
@@ -152,8 +192,8 @@ export function GeneralSettings() {
             </label>
             <Input
               type="number"
-              value={getSettingValue('session_timeout')}
-              onChange={(e) => updateSetting('session_timeout', parseInt(e.target.value) || 30)}
+              value={formValues['session_timeout'] || ''}
+              onChange={(e) => handleInputChange('session_timeout', parseInt(e.target.value) || 30)}
               placeholder="30"
               disabled={saving}
             />
@@ -165,8 +205,8 @@ export function GeneralSettings() {
             </label>
             <Input
               type="number"
-              value={getSettingValue('auto_logout')}
-              onChange={(e) => updateSetting('auto_logout', parseInt(e.target.value) || 60)}
+              value={formValues['auto_logout'] || ''}
+              onChange={(e) => handleInputChange('auto_logout', parseInt(e.target.value) || 60)}
               placeholder="60"
               disabled={saving}
             />

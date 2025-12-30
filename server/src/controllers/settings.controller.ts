@@ -2,6 +2,24 @@ import { Request, Response } from "express";
 import { prisma } from "../utils/prisma";
 import { z } from "zod";
 
+// Default settings to ensure they exist
+const DEFAULT_SETTINGS = [
+  // General Settings
+  { key: 'company_name', value: 'My POS Business', category: 'general', scope: 'global' },
+  { key: 'default_currency', value: 'USD', category: 'general', scope: 'global' },
+  { key: 'tax_rate', value: 8.5, category: 'general', scope: 'global' },
+  { key: 'low_stock_threshold', value: 10, category: 'general', scope: 'global' },
+  { key: 'receipt_footer', value: 'Thank you for your business!', category: 'general', scope: 'global' },
+  { key: 'session_timeout', value: 30, category: 'general', scope: 'global' },
+  { key: 'auto_logout', value: 60, category: 'general', scope: 'global' },
+  
+  // About Settings (system information)
+  { key: 'system_name', value: 'Multi-Branch POS System', category: 'about', scope: 'global' },
+  { key: 'system_version', value: '1.0.0', category: 'about', scope: 'global' },
+  { key: 'support_email', value: 'support@pos-system.com', category: 'about', scope: 'global' },
+  { key: 'support_phone', value: '1-800-POS-HELP', category: 'about', scope: 'global' },
+];
+
 // Validation Schemas
 const createSettingSchema = z.object({
   key: z.string().min(1),
@@ -14,6 +32,28 @@ const createSettingSchema = z.object({
 const updateSettingSchema = z.object({
   value: z.any(),
 });
+
+// Helper function to ensure default settings exist
+export const ensureDefaultSettings = async () => {
+  for (const setting of DEFAULT_SETTINGS) {
+    const existing = await (prisma as any).systemSetting.findFirst({
+      where: {
+        key: setting.key,
+        scope: setting.scope,
+        scopeId: null
+      }
+    });
+
+    if (!existing) {
+      await (prisma as any).systemSetting.create({
+        data: {
+          ...setting,
+          scopeId: null
+        }
+      });
+    }
+  }
+};
 
 // Helper function to check if user can access setting category
 const canAccessCategory = (userRole: string, category: string, userId: string, settingScope?: string, settingScopeId?: string | null) => {
@@ -28,9 +68,10 @@ const canAccessCategory = (userRole: string, category: string, userId: string, s
     return { canRead: true, canWrite };
   }
   
-  // Only ADMIN can access general settings
+  // Only ADMIN can access general settings (both read and write)
   if (category === "general") {
-    return { canRead: userRole === "ADMIN", canWrite: userRole === "ADMIN" };
+    const isAdmin = userRole === "ADMIN";
+    return { canRead: isAdmin, canWrite: isAdmin };
   }
   
   return { canRead: false, canWrite: false };
@@ -39,6 +80,9 @@ const canAccessCategory = (userRole: string, category: string, userId: string, s
 // GET /api/settings
 export const getAllSettings = async (req: Request, res: Response) => {
   try {
+    // Ensure default settings exist
+    await ensureDefaultSettings();
+    
     const user = (req as any).user;
     const { category } = req.query;
 
@@ -88,11 +132,13 @@ export const getSettingsByCategory = async (req: Request, res: Response) => {
       return res.status(400).json({ message: "Invalid category" });
     }
 
-    const { canRead } = canAccessCategory(user.role, category, user.id);
-    if (!canRead) {
+    // Check if user has permission to read this category
+    const { canRead: categoryCanRead } = canAccessCategory(user.role, category, user.id);
+    if (!categoryCanRead) {
       return res.status(403).json({ message: "Access denied" });
     }
 
+    // Fetch settings for this category
     const settings = await (prisma as any).systemSetting.findMany({
       where: {
         category,
@@ -104,7 +150,19 @@ export const getSettingsByCategory = async (req: Request, res: Response) => {
       orderBy: { key: "asc" }
     });
 
-    res.json(settings);
+    // Filter based on detailed access rules
+    const filteredSettings = settings.filter((setting: any) => {
+      const { canRead } = canAccessCategory(
+        user.role,
+        category,
+        user.id,
+        setting.scope,
+        setting.scopeId
+      );
+      return canRead;
+    });
+
+    res.json(filteredSettings);
   } catch (error) {
     console.error("Error fetching settings by category:", error);
     res.status(500).json({ message: "Error fetching settings" });

@@ -163,3 +163,4 @@ export const toggleUserStatus = async (req: Request, res: Response) => {
     res.status(500).json({ message: "Error updating user status" });
   }
 };
+
