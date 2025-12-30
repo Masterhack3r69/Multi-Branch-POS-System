@@ -46,7 +46,8 @@ export const useSocketStore = create<SocketState>((set, get) => ({
     try {
       // Dynamic import to avoid SSR issues
       import('socket.io-client').then(({ io }) => {
-        const newSocket = io(import.meta.env.VITE_API_URL || 'http://localhost:3000', {
+        const apiUrl = (import.meta as any).env?.VITE_API_URL || 'http://localhost:3000';
+        const newSocket = io(apiUrl, {
           auth: { token },
           transports: ['websocket', 'polling'],
           reconnection: false, // Disable auto-reconnect to prevent infinite loop

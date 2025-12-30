@@ -37,9 +37,16 @@ export const createSale = async (req: Request, res: Response) => {
   try {
     const data = createSaleSchema.parse(req.body);
 
+    // Fetch tax rate from settings (default to 0 if not found)
+    const taxRateSetting = await prisma.systemSetting.findFirst({
+      where: { key: 'tax_rate', scope: 'global' }
+    });
+    
+    const taxRate = taxRateSetting ? (Number(taxRateSetting.value) / 100) : 0;
+
     // Calculate totals
     const itemsTotal = data.items.reduce((sum, item) => sum + (item.price * item.qty) - (item.discount || 0), 0);
-    const tax = itemsTotal * 0.1; // Simple 10% tax for now, can be configured later
+    const tax = itemsTotal * taxRate;
     const total = itemsTotal + tax;
 
     // Transaction: Create Sale, Items, Payments, and Update Stock

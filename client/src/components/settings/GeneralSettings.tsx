@@ -2,20 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 import { Card } from '@/components/ui/Card';
 import { Input } from '@/components/ui/Input';
 
-interface GeneralSetting {
-  id: string;
-  key: string;
-  value: any;
-  category: string;
-  scope: string;
-  scopeId: string | null;
-  updatedBy: string | null;
-  createdAt: string;
-  updatedAt: string;
-}
-
 export function GeneralSettings() {
-  const [settings, setSettings] = useState<GeneralSetting[]>([]);
   const [formValues, setFormValues] = useState<Record<string, any>>({});
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -31,7 +18,6 @@ export function GeneralSettings() {
       const { api } = await import('@/lib/api');
       const response = await api.get('/settings/general');
       if (Array.isArray(response.data)) {
-        setSettings(response.data);
         // Initialize form values
         const values: Record<string, any> = {};
         response.data.forEach(setting => {
@@ -40,11 +26,9 @@ export function GeneralSettings() {
         setFormValues(values);
       } else {
         console.warn('Settings response is not an array:', response.data);
-        setSettings([]);
       }
     } catch (error) {
       console.error('Error fetching settings:', error);
-      setSettings([]);
     } finally {
       setLoading(false);
     }

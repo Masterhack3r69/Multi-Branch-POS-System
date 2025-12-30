@@ -6,6 +6,8 @@ import { db } from '@/lib/db';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { Badge } from '@/components/ui/Badge';
+import { DiscountModal } from '@/components/DiscountModal';
+import { ReceiptModal } from '@/components/ReceiptModal';
 
 interface Product {
   id: string;
@@ -38,6 +40,16 @@ export function POSTerminal() {
 
   const [branchId, setBranchId] = useState<string>('');
   const [terminalId, setTerminalId] = useState<string>('');
+  const [branchName, setBranchName] = useState<string>('');
+
+  // Discount & Receipt States
+  const [showDiscountModal, setShowDiscountModal] = useState(false);
+  const [discountAmount, setDiscountAmount] = useState(0);
+  const [showReceiptModal, setShowReceiptModal] = useState(false);
+  const [lastReceipt, setLastReceipt] = useState<any>(null);
+  const [taxRate, setTaxRate] = useState(0);
+  const [paymentMethod, setPaymentMethod] = useState('CASH');
+  const [receiptFooter, setReceiptFooter] = useState('Thank you for your business!');
 
   useEffect(() => {
     // Redirect admin users away from terminal
@@ -50,6 +62,7 @@ export function POSTerminal() {
     window.addEventListener('offline', () => setOnline(false));
     
     fetchContext();
+    fetchTaxRate();
     // Check session after user is available
     if (user) {
       checkExistingSession();
@@ -76,6 +89,7 @@ export function POSTerminal() {
           if (bRes.data.length > 0) {
             const targetBranch = user?.branchId || bRes.data[0].id;
             setBranchId(targetBranch);
+            setBranchName(bRes.data.find((b: any) => b.id === targetBranch)?.name || 'Branch');
             
             const tRes = await api.get(`/branches/${targetBranch}/terminals`);
             if (tRes.data.length > 0) setTerminalId(tRes.data[0].id);
@@ -83,6 +97,23 @@ export function POSTerminal() {
       }
     } catch (e) {
       console.error(e);
+    }
+  };
+
+  const fetchTaxRate = async () => {
+    try {
+      const res = await api.get('/settings/general');
+      if (Array.isArray(res.data)) {
+        const taxSetting = res.data.find((s: any) => s.key === 'tax_rate');
+        setTaxRate(taxSetting ? Number(taxSetting.value) / 100 : 0);
+        
+        const footerSetting = res.data.find((s: any) => s.key === 'receipt_footer');
+        setReceiptFooter(footerSetting ? footerSetting.value : 'Thank you for your business!');
+      }
+    } catch (e) {
+      console.error('Error fetching settings:', e);
+      setTaxRate(0);
+      setReceiptFooter('Thank you for your business!');
     }
   };
 
@@ -245,6 +276,26 @@ export function POSTerminal() {
     });
   };
 
+  const updateCartItemQty = (skuId: string, qty: number) => {
+    if (qty <= 0) {
+      removeFromCart(skuId);
+      return;
+    }
+    setCart((prev) =>
+      prev.map((item) =>
+        item.skuId === skuId ? { ...item, qty } : item
+      )
+    );
+  };
+
+  const removeFromCart = (skuId: string) => {
+    setCart((prev) => prev.filter((item) => item.skuId !== skuId));
+  };
+
+  const clearCart = () => {
+    setCart([]);
+  };
+
   const checkout = async () => {
     if (!sessionActive) {
       alert('Cash session must be active to complete sales. Please start a session first.');
@@ -252,44 +303,85 @@ export function POSTerminal() {
     }
     
     setLoading(true);
-    const saleData = {
-      branchId,
-      terminalId,
-      cashierId: user?.id,
-      items: cart.map(item => ({
-        skuId: item.skuId,
-        qty: item.qty,
-        price: item.price
-      })),
-      payments: [{
-        method: 'CASH',
-        amount: total
-      }]
-    };
-
     try {
+      const subtotal = cart.reduce((sum, item) => sum + item.price * item.qty, 0);
+      const tax = subtotal * taxRate;
+      const finalTotal = subtotal - discountAmount + tax;
+
+      const saleData = {
+        branchId,
+        terminalId,
+        cashierId: user?.id,
+        items: cart.map(item => ({
+          skuId: item.skuId,
+          qty: item.qty,
+          price: item.price,
+          discount: 0 // Per-item discount optional; transaction-wide handled via calculation
+        })),
+        payments: [{
+          method: paymentMethod,
+          amount: finalTotal
+        }]
+      };
+
+      let saleResponse;
       if (online) {
-          await api.post('/sales', saleData);
-          alert('Sale completed!');
-          fetchStock();
+          saleResponse = await api.post('/sales', saleData);
       } else {
           await db.queueSale(saleData);
-          alert('Sale queued (Offline)');
+          saleResponse = { data: { id: `offline-${Date.now()}` } };
       }
+
+      // Calculate change
+      const changeAmount = Math.max(0, finalTotal - finalTotal);
+
+      // Prepare receipt data
+      const receiptData = {
+        transactionNumber: saleResponse.data?.id || 'TXN-OFFLINE',
+        items: cart,
+        subtotal,
+        discountAmount,
+        taxAmount: tax,
+        total: finalTotal,
+        taxRate,
+        paymentMethod,
+        paymentAmount: finalTotal,
+        changeAmount,
+        timestamp: new Date(),
+        cashierName: user?.name || 'Cashier',
+        terminalId,
+        branchName
+      };
+
+      setLastReceipt(receiptData);
+      setShowReceiptModal(true);
+
+      // Reset cart and discount
       setCart([]);
+      setDiscountAmount(0);
+      setPaymentMethod('CASH');
+
+      if (online) fetchStock();
     } catch (e) {
-      alert('Sale failed');
+      alert('Sale failed: ' + (e as any).message);
       console.error(e);
     } finally {
       setLoading(false);
     }
   };
 
+  const handleApplyDiscount = (amount: number) => {
+    setDiscountAmount(amount);
+    setShowDiscountModal(false);
+  };
+
   const filteredProducts = products.filter(p => 
     p.name.toLowerCase().includes(search.toLowerCase())
   );
 
-  const total = cart.reduce((sum, item) => sum + item.price * item.qty, 0);
+  const subtotal = cart.reduce((sum, item) => sum + item.price * item.qty, 0);
+  const taxAmount = subtotal * taxRate;
+  const total = subtotal - discountAmount + taxAmount;
 
   return (
     <div className="flex h-[calc(100vh-theme(spacing.16))] gap-6">
@@ -362,13 +454,38 @@ export function POSTerminal() {
         <div className="flex-1 overflow-auto p-4 space-y-2">
           {cart.map((item) => (
             <div key={item.skuId} className="flex justify-between items-center p-3 border border-black bg-zinc-50 group hover:bg-zinc-100">
-              <div>
+              <div className="flex-1">
                 <div className="font-bold text-sm uppercase">{item.name}</div>
                 <div className="text-xs font-mono text-zinc-500 group-hover:text-zinc-700">
-                    ${item.price} x {item.qty}
+                    ${item.price} each
                 </div>
               </div>
-              <div className="font-mono font-bold">${(item.price * item.qty).toFixed(2)}</div>
+              <div className="flex items-center gap-2">
+                <div className="flex items-center border border-black">
+                  <button
+                    onClick={() => updateCartItemQty(item.skuId, item.qty - 1)}
+                    className="w-8 h-8 flex items-center justify-center font-bold hover:bg-black hover:text-white"
+                  >
+                    −
+                  </button>
+                  <div className="w-8 h-8 flex items-center justify-center font-mono font-bold border-l border-r border-black text-sm">
+                    {item.qty}
+                  </div>
+                  <button
+                    onClick={() => updateCartItemQty(item.skuId, item.qty + 1)}
+                    className="w-8 h-8 flex items-center justify-center font-bold hover:bg-black hover:text-white"
+                  >
+                    +
+                  </button>
+                </div>
+                <div className="font-mono font-bold min-w-12 text-right">${(item.price * item.qty).toFixed(2)}</div>
+                <button
+                  onClick={() => removeFromCart(item.skuId)}
+                  className="w-8 h-8 flex items-center justify-center font-bold text-red-600 hover:bg-red-600 hover:text-white border border-red-600"
+                >
+                  ✕
+                </button>
+              </div>
             </div>
           ))}
           {cart.length === 0 && (
@@ -378,18 +495,68 @@ export function POSTerminal() {
           )}
         </div>
         
-        <div className="p-4 border-t-2 border-black bg-zinc-50">
-          <div className="flex justify-between mb-4 text-xl font-black uppercase tracking-tighter">
-            <span>Total</span>
-            <span className="font-mono">${total.toFixed(2)}</span>
+        <div className="p-4 border-t-2 border-black bg-zinc-50 space-y-4">
+          {/* Subtotal, Discount, Tax Summary */}
+          <div className="space-y-2 text-sm">
+            <div className="flex justify-between">
+              <span className="font-bold">Subtotal:</span>
+              <span className="font-mono">${subtotal.toFixed(2)}</span>
+            </div>
+            {discountAmount > 0 && (
+              <div className="flex justify-between text-red-600 font-bold">
+                <span>Discount:</span>
+                <span className="font-mono">-${discountAmount.toFixed(2)}</span>
+              </div>
+            )}
+            <div className="flex justify-between">
+              <span className="font-bold">Tax ({(taxRate * 100).toFixed(2)}%):</span>
+              <span className="font-mono">${taxAmount.toFixed(2)}</span>
+            </div>
+            <div className="flex justify-between text-lg font-black uppercase tracking-tighter pt-2 border-t border-black">
+              <span>Total</span>
+              <span className="font-mono">${total.toFixed(2)}</span>
+            </div>
           </div>
-          <Button
-            onClick={checkout}
-            disabled={cart.length === 0 || loading}
-            className="w-full h-14 text-lg"
-          >
-            {loading ? 'PROCESSING...' : 'COMPLETE SALE'}
-          </Button>
+
+          {/* Payment Method Selector */}
+          <div>
+            <label className="block text-xs font-bold uppercase mb-2">Payment Method</label>
+            <select
+              value={paymentMethod}
+              onChange={(e) => setPaymentMethod(e.target.value)}
+              className="w-full border-2 border-black p-2 font-bold uppercase focus:outline-none focus:bg-zinc-50 bg-white"
+            >
+              <option value="CASH">CASH</option>
+              <option value="CARD">CARD</option>
+              <option value="CHECK">CHECK</option>
+              <option value="OTHER">OTHER</option>
+            </select>
+          </div>
+
+          {/* Action Buttons */}
+          <div className="flex gap-2">
+            <Button
+              onClick={checkout}
+              disabled={cart.length === 0 || loading}
+              className="flex-1 h-12 text-base"
+            >
+              {loading ? 'PROCESSING...' : 'COMPLETE SALE'}
+            </Button>
+            <button
+              onClick={() => setShowDiscountModal(true)}
+              disabled={cart.length === 0}
+              className="px-3 h-12 border-2 border-blue-600 text-blue-600 font-bold uppercase text-xs hover:bg-blue-600 hover:text-white disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              {discountAmount > 0 ? `$ DISCOUNT: ${discountAmount.toFixed(2)}` : 'DISCOUNT'}
+            </button>
+            <button
+              onClick={clearCart}
+              disabled={cart.length === 0}
+              className="px-3 h-12 border-2 border-red-600 text-red-600 font-bold uppercase text-xs hover:bg-red-600 hover:text-white disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              Clear
+            </button>
+          </div>
         </div>
       </div>
 
@@ -411,6 +578,24 @@ export function POSTerminal() {
             }}
             onCancel={() => setShowCloseSession(false)}
           />
+      )}
+
+      {/* Discount Modal */}
+      {showDiscountModal && (
+        <DiscountModal
+          subtotal={subtotal}
+          onApply={handleApplyDiscount}
+          onCancel={() => setShowDiscountModal(false)}
+        />
+      )}
+
+      {/* Receipt Modal */}
+      {showReceiptModal && lastReceipt && (
+        <ReceiptModal
+          {...lastReceipt}
+          receiptFooter={receiptFooter}
+          onClose={() => setShowReceiptModal(false)}
+        />
       )}
     </div>
   );
