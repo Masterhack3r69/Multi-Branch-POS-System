@@ -20,16 +20,23 @@ export const useSocketStore = create<SocketState>((set, get) => ({
   token: null,
 
   connect: (token: string) => {
-    const { socket } = get();
-    const { setStatus } = useConnectionStore.getState();
+    const currentState = get();
     
-    if (socket?.connected) {
-      console.log('Socket already connected');
+    // If already connecting or connected, don't reconnect
+    if (currentState.isConnecting || currentState.isConnected) {
+      console.log('Socket already connecting or connected, skipping');
       return;
     }
 
-    set({ isConnecting: true, error: null, token });
-    setStatus('connecting');
+    // If socket exists and is connected, don't reconnect
+    if (currentState.socket?.connected) {
+      console.log('Socket already connected, updating state');
+      set({ isConnected: true, isConnecting: false, token });
+      return;
+    }
+
+    set({ isConnecting: true });
+    console.log('Starting socket connection...');
     
     // Update realtime store
     import('./realtimeStore').then(({ useRealtimeStore }) => {
@@ -39,17 +46,15 @@ export const useSocketStore = create<SocketState>((set, get) => ({
     try {
       // Dynamic import to avoid SSR issues
       import('socket.io-client').then(({ io }) => {
-        const newSocket = io('http://localhost:3000', {
+        const newSocket = io(import.meta.env.VITE_API_URL || 'http://localhost:3000', {
           auth: { token },
           transports: ['websocket', 'polling'],
-          reconnection: true,
-          reconnectionAttempts: 5,
-          reconnectionDelay: 1000,
+          reconnection: false, // Disable auto-reconnect to prevent infinite loop
         });
 
         newSocket.on('connect', () => {
-          console.log('Connected to WebSocket server');
-          set({ isConnected: true, isConnecting: false, error: null });
+          console.log('✅ Connected to WebSocket server');
+          set({ isConnected: true, isConnecting: false, error: null, socket: newSocket, token });
           
           // Update connection stores
           import('./realtimeStore').then(({ useRealtimeStore }) => {
@@ -62,7 +67,7 @@ export const useSocketStore = create<SocketState>((set, get) => ({
         });
 
         newSocket.on('disconnect', (reason: string) => {
-          console.log('Disconnected from WebSocket server:', reason);
+          console.log('❌ Disconnected from WebSocket server:', reason);
           set({ isConnected: false, isConnecting: false });
           
           // Update connection stores
@@ -75,10 +80,10 @@ export const useSocketStore = create<SocketState>((set, get) => ({
         });
 
         newSocket.on('connect_error', (error: Error) => {
-          console.error('WebSocket connection error:', error);
+          console.error('⚠️ WebSocket connection error:', error);
           set({ 
             error: 'Failed to connect to server', 
-            isConnecting: false 
+            isConnecting: false
           });
           
           // Update connection stores
@@ -86,27 +91,16 @@ export const useSocketStore = create<SocketState>((set, get) => ({
             useRealtimeStore.getState().setConnectionStatus('error');
           });
           
-          const { setStatus, incrementReconnectAttempts, getReconnectDelay } = useConnectionStore.getState();
+          const { setStatus } = useConnectionStore.getState();
           setStatus('error');
-          incrementReconnectAttempts();
-          
-          // Attempt reconnection if within limits
-          const reconnectDelay = getReconnectDelay();
-          setTimeout(() => {
-            const currentState = get();
-            if (currentState.token) {
-              console.log(`Attempting reconnection in ${reconnectDelay}ms...`);
-              currentState.connect(currentState.token);
-            }
-          }, reconnectDelay);
         });
 
-        set({ socket: newSocket });
+        set({ socket: newSocket, token });
       }).catch(error => {
         console.error('Failed to import socket.io-client:', error);
         set({ 
           error: 'WebSocket not available', 
-          isConnecting: false 
+          isConnecting: false
         });
       });
     } catch (error) {
@@ -119,15 +113,18 @@ export const useSocketStore = create<SocketState>((set, get) => ({
 
   disconnect: () => {
     const { socket } = get();
+    console.log('Disconnecting socket...');
     if (socket) {
+      socket.removeAllListeners(); // Remove all event listeners
       socket.disconnect();
-      set({ 
-        socket: null, 
-        isConnected: false, 
-        error: null,
-        token: null
-      });
     }
+    set({ 
+      socket: null, 
+      isConnected: false, 
+      isConnecting: false,
+      error: null,
+      token: null
+    });
   },
 
   setError: (error: string | null) => {

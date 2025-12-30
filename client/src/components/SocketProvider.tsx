@@ -8,20 +8,22 @@ interface SocketProviderProps {
 
 const SocketProvider = ({ children }: SocketProviderProps) => {
   const { token } = useAuthStore();
-  const { connect, disconnect } = useSocketStore();
 
   useEffect(() => {
+    const { connect, disconnect, isConnected } = useSocketStore.getState();
+
     if (token) {
-      connect(token);
+      // Only connect if not already connected
+      if (!isConnected) {
+        connect(token);
+      }
     } else {
+      // Disconnect if no token
       disconnect();
     }
-
-    return () => {
-      if (token) {
-        disconnect();
-      }
-    };
+    
+    // Do NOT cleanup on unmount - keep connection alive
+    // Only cleanup when token changes
   }, [token]);
 
   return <>{children}</>;

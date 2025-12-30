@@ -3,8 +3,14 @@ import { create } from 'zustand';
 interface User {
   id: string;
   name: string;
+  email: string;
   role: string;
   branchId?: string | null;
+  branch?: {
+    id: string;
+    name: string;
+    code: string;
+  } | null;
 }
 
 interface AuthState {

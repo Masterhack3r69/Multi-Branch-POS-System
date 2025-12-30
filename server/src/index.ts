@@ -14,6 +14,7 @@ import reportRoutes from './routes/report.routes';
 import cashRoutes from './routes/cash.routes';
 import managerRoutes from './routes/manager.routes';
 import cashViewRoutes from './routes/cashView.routes';
+import settingsRoutes from './routes/settings.routes';
 import { initializeSocket } from './socket/socketServer';
 
 dotenv.config();
@@ -52,6 +53,7 @@ app.use('/api/reports', reportRoutes);
 app.use('/api/cash', cashRoutes);
 app.use('/api/manager', managerRoutes);
 app.use('/api/cash-view', cashViewRoutes);
+app.use('/api/settings', settingsRoutes);
 
 // Health Check
 app.get('/health', (req, res) => {

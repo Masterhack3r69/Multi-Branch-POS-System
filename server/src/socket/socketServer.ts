@@ -2,6 +2,7 @@ import { Server as SocketIOServer } from 'socket.io';
 import { authenticateSocket, AuthenticatedSocket } from './socketAuth';
 
 let io: SocketIOServer;
+const userSockets = new Map<string, string>(); // Map of userId to socketId
 
 export const initializeSocket = (server: any) => {
   io = new SocketIOServer(server, {
@@ -9,7 +10,11 @@ export const initializeSocket = (server: any) => {
       origin: process.env.FRONTEND_URL || 'http://localhost:5173',
       credentials: true,
       methods: ['GET', 'POST']
-    }
+    },
+    // Add connection limits to prevent spam
+    maxHttpBufferSize: 1e6, // 1 MB
+    pingTimeout: 60000,
+    pingInterval: 25000,
   });
 
   // Use authentication middleware
@@ -17,6 +22,17 @@ export const initializeSocket = (server: any) => {
 
   io.on('connection', (socket: AuthenticatedSocket) => {
     console.log(`User connected: ${socket.userId}`);
+
+    // Check if user already has an active connection
+    const existingSocketId = userSockets.get(socket.userId!);
+    if (existingSocketId && io.sockets.sockets.has(existingSocketId)) {
+      console.log(`User ${socket.userId} already connected, disconnecting duplicate connection`);
+      socket.disconnect(true);
+      return;
+    }
+
+    // Store this socket as the active connection for this user
+    userSockets.set(socket.userId!, socket.id);
 
     // Join appropriate rooms based on user role and branch
     if (socket.branchId) {
@@ -45,6 +61,10 @@ export const initializeSocket = (server: any) => {
 
     socket.on('disconnect', () => {
       console.log(`User disconnected: ${socket.userId}`);
+      // Remove this user's socket from tracking
+      if (userSockets.get(socket.userId!) === socket.id) {
+        userSockets.delete(socket.userId!);
+      }
     });
   });
 

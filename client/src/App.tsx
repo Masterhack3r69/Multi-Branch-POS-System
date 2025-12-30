@@ -12,6 +12,7 @@ import { CashManagement } from '@/pages/CashManagement';
 import { CashSessionDebug } from '@/pages/CashSessionDebug';
 import { Reports } from '@/pages/Reports';
 import { Products } from '@/pages/Products';
+import { Settings } from '@/pages/Settings';
 import SocketProvider from '@/components/SocketProvider';
 
 // Component to handle initial redirect after login
@@ -61,6 +62,7 @@ function App() {
             <Route path="reports" element={<Reports />} />
             <Route path="cash-management" element={<CashManagement />} />
             <Route path="debug-cash" element={<CashSessionDebug />} />
+            <Route path="settings" element={<Settings />} />
           </Route>
         </Routes>
       </SocketProvider>

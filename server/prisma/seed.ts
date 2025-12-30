@@ -71,6 +71,46 @@ async function main() {
       });
       console.log('Sample product created');
   }
+
+  // Create default system settings
+  const defaultSettings = [
+    // General Settings
+    { key: 'company_name', value: 'My POS Business', category: 'general', scope: 'global' },
+    { key: 'default_currency', value: 'USD', category: 'general', scope: 'global' },
+    { key: 'tax_rate', value: 8.5, category: 'general', scope: 'global' },
+    { key: 'low_stock_threshold', value: 10, category: 'general', scope: 'global' },
+    { key: 'receipt_footer', value: 'Thank you for your business!', category: 'general', scope: 'global' },
+    { key: 'session_timeout', value: 30, category: 'general', scope: 'global' },
+    { key: 'auto_logout', value: 60, category: 'general', scope: 'global' },
+    
+    // About Settings (system information)
+    { key: 'system_name', value: 'Multi-Branch POS System', category: 'about', scope: 'global' },
+    { key: 'system_version', value: '1.0.0', category: 'about', scope: 'global' },
+    { key: 'support_email', value: 'support@pos-system.com', category: 'about', scope: 'global' },
+    { key: 'support_phone', value: '1-800-POS-HELP', category: 'about', scope: 'global' },
+  ];
+
+  for (const setting of defaultSettings) {
+    const existing = await (prisma as any).systemSetting.findFirst({
+      where: {
+        key: setting.key,
+        scope: setting.scope,
+        scopeId: null
+      }
+    });
+
+    if (!existing) {
+      await (prisma as any).systemSetting.create({
+        data: {
+          ...setting,
+          scopeId: null
+        }
+      });
+      console.log(`Created setting: ${setting.key}`);
+    }
+  }
+
+  console.log('Default system settings created');
 }
 
 main()

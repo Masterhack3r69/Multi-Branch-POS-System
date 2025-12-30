@@ -22,7 +22,7 @@ export function MainLayout() {
                   {['ADMIN', 'MANAGER'].includes(user?.role || '') && (
                       <Link to="/dashboard" className={getLinkClass('/dashboard')}>Dashboard</Link>
                   )}
-                  {!['ADMIN', 'MANAGER'].includes(user?.role || '') && (
+                  {user?.role !== 'ADMIN' && user?.branchId && (
                     <Link to="/terminal" className={getLinkClass('/terminal')}>Terminal</Link>
                   )}
                   <Link to="/sales" className={getLinkClass('/sales')}>Sales</Link>
@@ -38,6 +38,7 @@ export function MainLayout() {
                      <>
                         <Link to="/users" className={getLinkClass('/users')}>Users</Link>
                         <Link to="/branches" className={getLinkClass('/branches')}>Branches</Link>
+                        <Link to="/settings" className={getLinkClass('/settings')}>Settings</Link>
                      </>
                   )}
               </div>
