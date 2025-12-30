@@ -4,15 +4,85 @@ import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/Card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/Table';
 import { Button } from '@/components/ui/Button';
 import { useAuthStore } from '@/store/authStore';
+import { useSocket } from '@/hooks/useSocket';
+import { useRealtimeStore } from '@/store/realtimeStore';
+import { ConnectionStatus } from '@/components/ConnectionStatus';
 
 export function Dashboard() {
   const { user } = useAuthStore();
+  const { on } = useSocket();
+  const { incrementNewSales } = useRealtimeStore();
   const [stats, setStats] = useState<any>(null);
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
     fetchStats();
   }, []);
+
+  // Real-time updates
+  useEffect(() => {
+    const cleanupFunctions: (() => void)[] = [];
+
+    // Listen for new sales
+    const unsubscribeSale = on('sale:created', (newSale: any) => {
+      console.log('New sale received:', newSale);
+      incrementNewSales();
+      
+      setStats((prev: any) => {
+        if (!prev) return prev;
+        
+        return {
+          ...prev,
+          totalRevenue: prev.totalRevenue + newSale.total,
+          transactionCount: prev.transactionCount + 1,
+          recentSales: [newSale, ...(prev.recentSales || []).slice(0, 9)] // Keep last 10
+        };
+      });
+    });
+
+    // Listen for stock updates
+    const unsubscribeStock = on('stock:updated', (stockUpdate: any) => {
+      console.log('Stock update received:', stockUpdate);
+      
+      setStats((prev: any) => {
+        if (!prev) return prev;
+        
+        let newLowStockCount = prev.lowStockCount;
+        
+        // Update low stock count if this item crossed the threshold
+        if (stockUpdate.isLowStock) {
+          newLowStockCount = Math.max(0, newLowStockCount + 1);
+        }
+        
+        return {
+          ...prev,
+          lowStockCount: newLowStockCount
+        };
+      });
+    });
+
+    // Listen for low stock alerts
+    const unsubscribeLowStock = on('stock:low', (lowStockAlert: any) => {
+      console.log('Low stock alert received:', lowStockAlert);
+      
+      setStats((prev: any) => {
+        if (!prev) return prev;
+        
+        return {
+          ...prev,
+          lowStockCount: Math.max(0, prev.lowStockCount + 1)
+        };
+      });
+    });
+
+    if (unsubscribeSale) cleanupFunctions.push(unsubscribeSale);
+    if (unsubscribeStock) cleanupFunctions.push(unsubscribeStock);
+    if (unsubscribeLowStock) cleanupFunctions.push(unsubscribeLowStock);
+
+    return () => {
+      cleanupFunctions.forEach(cleanup => cleanup());
+    };
+  }, [on, incrementNewSales]);
 
   const fetchStats = async () => {
     setLoading(true);
@@ -132,10 +202,10 @@ export function Dashboard() {
         </Card>
         <Card className="bg-zinc-50">
           <CardHeader className="p-3">
-             <div className="flex justify-between items-center">
-                <span className="text-zinc-500 text-[10px] font-black uppercase">Server</span>
-                <span className="font-mono font-bold text-green-600 text-xs">CONNECTED</span>
-             </div>
+              <div className="flex justify-between items-center">
+                 <span className="text-zinc-500 text-[10px] font-black uppercase">Server</span>
+                 <ConnectionStatus />
+              </div>
           </CardHeader>
         </Card>
         <Card className="bg-zinc-50">
@@ -194,7 +264,7 @@ export function Dashboard() {
         <div className="space-y-3">
              <h2 className="text-lg font-black uppercase tracking-tight">Quick Actions</h2>
              <div className="grid grid-cols-1 gap-2">
-                 <Button className="h-12 text-sm border font-bold justify-start px-4" onClick={() => window.location.href='/'}>
+                  <Button className="h-12 text-sm border font-bold justify-start px-4" onClick={() => window.location.href='/terminal'}>
                     POS TERMINAL
                  </Button>
                  <Button className="h-12 text-sm border font-bold justify-start px-4" variant="outline" onClick={() => window.location.href='/products'}>

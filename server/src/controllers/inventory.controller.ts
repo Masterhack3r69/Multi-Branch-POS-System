@@ -1,6 +1,7 @@
 import { Request, Response } from 'express';
 import { prisma } from '../utils/prisma';
 import { z } from 'zod';
+import { broadcastToBranch, broadcastToAdmin } from '../socket/socketServer';
 
 const adjustStockSchema = z.object({
   skuId: z.string(),
@@ -51,6 +52,43 @@ export const adjustStock = async (req: Request, res: Response) => {
 
       return { stock, movement };
     });
+
+    // Emit real-time stock update events
+    try {
+      // Check if this is a low stock situation
+      const isLowStock = result.stock.qty <= result.stock.lowStockThreshold;
+      
+      broadcastToBranch(branchId, 'stock:updated', {
+        skuId,
+        branchId,
+        newQuantity: result.stock.qty,
+        qtyChange,
+        reason,
+        timestamp: result.movement.createdAt,
+        isLowStock
+      });
+
+      if (isLowStock) {
+        // Get SKU details for the notification
+        const skuDetails = await prisma.sKU.findUnique({
+          where: { id: skuId },
+          include: { product: true }
+        });
+
+        const lowStockData = {
+          skuId,
+          branchId,
+          currentQuantity: result.stock.qty,
+          threshold: result.stock.lowStockThreshold,
+          sku: skuDetails
+        };
+
+        broadcastToBranch(branchId, 'stock:low', lowStockData);
+        broadcastToAdmin('stock:low', lowStockData);
+      }
+    } catch (socketError) {
+      console.error('Failed to emit stock socket events:', socketError);
+    }
 
     res.json(result);
   } catch (error) {

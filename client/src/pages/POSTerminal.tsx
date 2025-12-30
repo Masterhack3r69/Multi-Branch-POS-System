@@ -25,7 +25,7 @@ import { CashSessionModal } from '@/components/CashSessionModal';
 import { CloseSessionModal } from '@/components/CloseSessionModal';
 
 export function POSTerminal() {
-  const { user, logout } = useAuthStore();
+  const { user, logout: globalLogout } = useAuthStore();
   const navigate = useNavigate();
   const [sessionActive, setSessionActive] = useState(false);
   const [showCloseSession, setShowCloseSession] = useState(false);
@@ -50,12 +50,16 @@ export function POSTerminal() {
     window.addEventListener('offline', () => setOnline(false));
     
     fetchContext();
+    // Check session after user is available
+    if (user) {
+      checkExistingSession();
+    }
     
     return () => {
         window.removeEventListener('online', () => setOnline(true));
         window.removeEventListener('offline', () => setOnline(false));
     };
-  }, [online, user?.role, navigate]);
+  }, [user, navigate]); // Check session when user changes
 
   useEffect(() => {
     if (branchId) {
@@ -113,6 +117,103 @@ export function POSTerminal() {
       }
   };
 
+  const checkExistingSession = async () => {
+    try {
+      const res = await api.get('/cash/session');
+      if (res.data) {
+        console.log('Existing cash session found:', res.data);
+        setSessionActive(true);
+      } else {
+        console.log('No active cash session found');
+        setSessionActive(false);
+      }
+    } catch (err: any) {
+      console.log('Session check failed:', err.response?.status || err.message);
+      // If 404, it means no session exists (which is expected)
+      if (err.response?.status !== 404) {
+        console.error('Unexpected error checking session:', err);
+      }
+      setSessionActive(false);
+    }
+  };
+
+  const handleLogout = async () => {
+    try {
+      console.log('Logout initiated, sessionActive:', sessionActive);
+      
+      // Check if there's an active cash session
+      if (sessionActive) {
+        console.log('Checking active session before logout...');
+        const res = await api.get('/cash/session');
+        console.log('Active session response:', res.data);
+        
+        if (res.data) {
+          // Calculate expected cash amount from sales for this session
+          console.log('Calculating expected cash amount from sales...');
+          const salesResult = await api.get('/cash/sales-for-session', {
+            params: { sessionId: res.data.id }
+          });
+          
+          const totalSales = salesResult.data?.totalSales || 0;
+          const startAmount = res.data.startAmount || 0;
+          const expectedAmount = startAmount + totalSales;
+          
+          console.log('Session calculations:', {
+            startAmount,
+            totalSales,
+            expectedAmount
+          });
+          
+          // Show confirmation dialog instead of prompt
+          const shouldEnd = window.confirm(
+            `End Shift Summary:\n\n` +
+            `Start Amount: $${startAmount.toFixed(2)}\n` +
+            `Sales Total: $${totalSales.toFixed(2)}\n` +
+            `Expected in Drawer: $${expectedAmount.toFixed(2)}\n\n` +
+            `Click OK to confirm and end shift\n` +
+            `Click Cancel to continue working`
+          );
+          
+          if (shouldEnd) {
+            try {
+              console.log('Ending session with expected amount:', expectedAmount);
+              const endResult = await api.post('/cash/session/end', {
+                endAmount: expectedAmount
+              });
+              console.log('Session end result:', endResult.data);
+              
+              // Reset session state before logout
+              setSessionActive(false);
+              
+              alert('Cash shift ended successfully!\n\n' +
+                     `Sales: $${totalSales.toFixed(2)}\n` +
+                     `Final Amount: $${expectedAmount.toFixed(2)}`);
+            } catch (err: any) {
+              console.error('Error ending cash session:', err);
+              alert('Failed to end cash session: ' + (err.response?.data?.message || err.message));
+              // Still logout even if session end fails
+            }
+          } else {
+            // User cancelled - don't logout
+            console.log('User cancelled shift end - continuing work');
+            return;
+          }
+        } else {
+          console.log('No active session found during logout check');
+        }
+      } else {
+        console.log('No session active, performing regular logout');
+      }
+      
+      // Perform regular logout
+      console.log('Performing global logout');
+      globalLogout();
+    } catch (err) {
+      console.error('Logout error:', err);
+      globalLogout();
+    }
+  };
+
   const syncPendingSales = async () => {
       if (!online) return;
       const pending = await db.getPendingSales();
@@ -145,19 +246,25 @@ export function POSTerminal() {
   };
 
   const checkout = async () => {
-    if (!branchId || !terminalId) return alert('No terminal selected');
+    if (!sessionActive) {
+      alert('Cash session must be active to complete sales. Please start a session first.');
+      return;
+    }
+    
     setLoading(true);
-    
-    const total = cart.reduce((sum, item) => sum + item.price * item.qty, 0);
-    const clientSaleId = crypto.randomUUID();
-    
     const saleData = {
-      clientSaleId,
       branchId,
       terminalId,
       cashierId: user?.id,
-      items: cart.map(item => ({ skuId: item.skuId, qty: item.qty, price: item.price })),
-      payments: [{ method: 'CASH', amount: total * 1.1 }]
+      items: cart.map(item => ({
+        skuId: item.skuId,
+        qty: item.qty,
+        price: item.price
+      })),
+      payments: [{
+        method: 'CASH',
+        amount: total
+      }]
     };
 
     try {
@@ -189,12 +296,25 @@ export function POSTerminal() {
       {/* Products Grid */}
       <div className="flex-1 flex flex-col min-h-0">
         <div className="flex justify-between items-center mb-6">
-            <h1 className="text-2xl font-black uppercase tracking-tighter">Terminal</h1>
+            <div className="flex items-center gap-4">
+                <h1 className="text-2xl font-black uppercase tracking-tighter">Terminal</h1>
+                <Badge variant={sessionActive ? 'success' : 'destructive'}>
+                   {sessionActive ? 'Session Active' : 'No Session'}
+                </Badge>
+            </div>
              <div className="flex items-center gap-4">
                  <Badge variant={online ? 'success' : 'destructive'}>
                     {online ? 'System Online' : 'System Offline'}
                  </Badge>
-            </div>
+                 {sessionActive && (
+                     <button
+                         onClick={handleLogout}
+                         className="text-red-600 hover:text-red-700 font-bold text-sm uppercase border border-red-600 px-3 py-1"
+                     >
+                         End Shift
+                     </button>
+                 )}
+             </div>
         </div>
         
         <div className="mb-6">
@@ -279,7 +399,7 @@ export function POSTerminal() {
             branchId={branchId}
             terminalId={terminalId}
             onSessionActive={() => setSessionActive(true)} 
-            onLogout={logout}
+            onLogout={handleLogout}
           />
       )}
 

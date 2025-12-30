@@ -21,17 +21,28 @@ export function CashSessionModal({ onSessionActive, onLogout, branchId, terminal
 
   const checkSession = async () => {
     try {
+      console.log('Checking cash session...');
       const res = await api.get('/cash/session');
+      console.log('Session check response:', res.data);
       if (res.data) {
+        console.log('Active session found, setting step to ACTIVE');
         setStep('ACTIVE');
         onSessionActive();
       } else {
+        console.log('No active session found, setting step to START');
         setStep('START');
       }
-    } catch (err) {
-      console.error(err);
+    } catch (err: any) {
+      console.error('Session check error:', err);
+      console.log('Response status:', err.response?.status);
       // If 404 or null, valid state -> START
-      setStep('START');
+      if (err.response?.status === 404) {
+        console.log('Got 404, setting step to START');
+        setStep('START');
+      } else {
+        console.log('Other error, setting step to START');
+        setStep('START');
+      }
     }
   };
 
@@ -77,8 +88,7 @@ export function CashSessionModal({ onSessionActive, onLogout, branchId, terminal
     );
   }
 
-  // If active, we don't show modal, or we render nothing (parent controls visibility)
-  // But wait, this modal works as a blocker. 
+  // If active, we don't show modal but should update parent state
   if (step === 'ACTIVE') {
       return null;
   }

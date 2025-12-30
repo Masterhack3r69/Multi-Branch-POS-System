@@ -19,17 +19,19 @@ export function MainLayout() {
           <div className="flex items-center gap-8">
               <div className="font-black text-xl tracking-tighter uppercase">POS.SYSTEM</div>
               <div className="hidden md:flex gap-6 text-sm font-bold uppercase tracking-wide">
-                  {user?.role === 'ADMIN' && (
+                  {['ADMIN', 'MANAGER'].includes(user?.role || '') && (
                       <Link to="/dashboard" className={getLinkClass('/dashboard')}>Dashboard</Link>
                   )}
-                  {user?.role !== 'ADMIN' && (
-                    <Link to="/" className={getLinkClass('/')}>Terminal</Link>
+                  {!['ADMIN', 'MANAGER'].includes(user?.role || '') && (
+                    <Link to="/terminal" className={getLinkClass('/terminal')}>Terminal</Link>
                   )}
                   <Link to="/sales" className={getLinkClass('/sales')}>Sales</Link>
                   {['ADMIN', 'MANAGER'].includes(user?.role || '') && (
                     <>
+                      <Link to="/terminal" className={getLinkClass('/terminal')}>Terminal</Link>
                       <Link to="/products" className={getLinkClass('/products')}>Products</Link>
                       <Link to="/inventory" className={getLinkClass('/inventory')}>Inventory</Link>
+                      <Link to="/cash-management" className={getLinkClass('/cash-management')}>Cash</Link>
                     </>
                   )}
                   {user?.role === 'ADMIN' && (

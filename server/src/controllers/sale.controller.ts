@@ -1,6 +1,7 @@
 import { Request, Response } from 'express';
 import { prisma } from '../utils/prisma';
 import { z } from 'zod';
+import { broadcastToBranch, broadcastToAdmin } from '../socket/socketServer';
 
 const createSaleItemSchema = z.object({
   skuId: z.string(),
@@ -115,6 +116,27 @@ export const createSale = async (req: Request, res: Response) => {
 
       return sale;
     });
+
+    // Emit real-time events
+    try {
+      broadcastToBranch(data.branchId, 'sale:created', {
+        id: result.id,
+        total: result.total,
+        createdAt: result.createdAt,
+        branchId: result.branchId,
+        cashierId: result.cashierId,
+        itemCount: result.items.length
+      });
+
+      broadcastToAdmin('sale:created', {
+        id: result.id,
+        total: result.total,
+        branchId: result.branchId,
+        createdAt: result.createdAt
+      });
+    } catch (socketError) {
+      console.error('Failed to emit socket events:', socketError);
+    }
 
     res.json(result);
   } catch (error) {

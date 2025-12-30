@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { api } from '@/lib/api';
 import { useAuthStore } from '@/store/authStore';
+import { useSocket } from '@/hooks/useSocket';
 import {
   Table,
   TableBody,
@@ -15,6 +16,7 @@ import { Badge } from "@/components/ui/Badge";
 
 export function Inventory() {
   const { user } = useAuthStore();
+  const { on } = useSocket();
   const [products, setProducts] = useState<any[]>([]);
   const [history, setHistory] = useState<any[]>([]);
   const [stocks, setStocks] = useState<any[]>([]);
@@ -30,6 +32,46 @@ export function Inventory() {
     loadHistory();
     loadStocks();
   }, []);
+
+  // Real-time updates
+  useEffect(() => {
+    const cleanupFunctions: (() => void)[] = [];
+
+    // Listen for stock updates
+    const unsubscribeStock = on('stock:updated', (stockUpdate: any) => {
+      console.log('Real-time stock update:', stockUpdate);
+      
+      // Update the stock in the local state
+      setStocks(prev => prev.map(stock => 
+        stock.skuId === stockUpdate.skuId && stock.branchId === stockUpdate.branchId
+          ? { ...stock, qty: stockUpdate.newQuantity }
+          : stock
+      ));
+
+      // Add to history
+      setHistory(prev => [
+        {
+          id: `realtime-${Date.now()}`,
+          skuId: stockUpdate.skuId,
+          branchId: stockUpdate.branchId,
+          type: 'ADJUSTMENT',
+          qty: stockUpdate.qtyChange,
+          reason: stockUpdate.reason,
+          createdAt: stockUpdate.timestamp,
+          sku: prev.find(h => h.skuId === stockUpdate.skuId)?.sku
+        },
+        ...prev.slice(0, 99) // Keep last 100
+      ]);
+    });
+
+    if (unsubscribeStock) {
+      cleanupFunctions.push(unsubscribeStock);
+    }
+
+    return () => {
+      cleanupFunctions.forEach(cleanup => cleanup());
+    };
+  }, [on]);
 
   const loadProducts = async () => {
     try {

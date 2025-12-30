@@ -2,6 +2,7 @@ import express from 'express';
 import cors from 'cors';
 import helmet from 'helmet';
 import dotenv from 'dotenv';
+import { createServer } from 'http';
 
 import authRoutes from './routes/auth.routes';
 import branchRoutes from './routes/branch.routes';
@@ -11,11 +12,15 @@ import inventoryRoutes from './routes/inventory.routes';
 import saleRoutes from './routes/sale.routes';
 import reportRoutes from './routes/report.routes';
 import cashRoutes from './routes/cash.routes';
+import managerRoutes from './routes/manager.routes';
+import cashViewRoutes from './routes/cashView.routes';
+import { initializeSocket } from './socket/socketServer';
 
 dotenv.config();
 
 const app = express();
 const PORT = process.env.PORT || 3000;
+const server = createServer(app);
 
 // CORS must be first to handle preflight requests
 app.use(cors({
@@ -45,6 +50,8 @@ app.use('/api/inventory', inventoryRoutes);
 app.use('/api/sales', saleRoutes);
 app.use('/api/reports', reportRoutes);
 app.use('/api/cash', cashRoutes);
+app.use('/api/manager', managerRoutes);
+app.use('/api/cash-view', cashViewRoutes);
 
 // Health Check
 app.get('/health', (req, res) => {
@@ -60,11 +67,14 @@ app.use((err: any, req: express.Request, res: express.Response, next: express.Ne
   });
 });
 
+// Initialize Socket.IO
+initializeSocket(server);
+
 // 404 Handler
 app.use((req, res) => {
   res.status(404).json({ message: 'Route not found' });
 });
 
-app.listen(PORT, () => {
+server.listen(PORT, () => {
   console.log(`Server running on http://localhost:${PORT}`);
 });

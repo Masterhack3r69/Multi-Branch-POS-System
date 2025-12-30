@@ -1,6 +1,7 @@
 import { Request, Response } from 'express';
 import { prisma } from '../utils/prisma';
 import { z } from 'zod';
+import { broadcastToBranch, broadcastToAdmin } from '../socket/socketServer';
 
 const startSessionSchema = z.object({
   branchId: z.string(),
@@ -61,11 +62,119 @@ export const startSession = async (req: Request, res: Response) => {
       }
     });
 
+    // Emit real-time cash session events
+    try {
+      broadcastToBranch(branchId, 'cash:session_started', {
+        sessionId: session.id,
+        branchId,
+        terminalId,
+        cashierId: userId,
+        startAmount,
+        startTime: session.startTime
+      });
+    } catch (socketError) {
+      console.error('Failed to emit cash session events:', socketError);
+    }
+
     res.json(session);
   } catch (error) {
     if (error instanceof z.ZodError) return res.status(400).json({ errors: error.errors });
     console.error(error);
     res.status(500).json({ message: 'Error starting session' });
+  }
+};
+
+export const getSessionSales = async (req: Request, res: Response) => {
+  try {
+    const { sessionId } = req.query;
+    const user = (req as any).user;
+    
+    if (!sessionId) {
+      return res.status(400).json({ message: 'Session ID required' });
+    }
+    
+    // Verify user owns this session
+    const session = await prisma.cashSession.findFirst({
+      where: {
+        id: String(sessionId),
+        cashierId: user.id
+      }
+    });
+    
+    if (!session) {
+      return res.status(404).json({ message: 'Session not found or access denied' });
+    }
+    
+    // Calculate total sales for this session
+    const salesAgg = await prisma.sale.aggregate({
+      where: {
+        cashierId: user.id,
+        createdAt: {
+          gte: session.startTime,
+          // If session ended, only include sales before end time
+          ...(session.endTime ? { lte: session.endTime } : {})
+        }
+      },
+      _sum: { total: true },
+      _count: { id: true }
+    });
+    
+    // Calculate total cash transactions (float in, drops, payouts)
+    const transactionsAgg = await prisma.cashTransaction.aggregate({
+      where: {
+        sessionId: session.id
+      },
+      _sum: { amount: true }
+    });
+    
+    const floatIn = await prisma.cashTransaction.aggregate({
+      where: {
+        sessionId: session.id,
+        type: 'FLOAT_IN'
+      },
+      _sum: { amount: true }
+    });
+    
+    const drops = await prisma.cashTransaction.aggregate({
+      where: {
+        sessionId: session.id,
+        type: 'DROP'
+      },
+      _sum: { amount: true }
+    });
+    
+    const payouts = await prisma.cashTransaction.aggregate({
+      where: {
+        sessionId: session.id,
+        type: 'PAYOUT'
+      },
+      _sum: { amount: true }
+    });
+    
+    const result = {
+      sessionId: session.id,
+      startTime: session.startTime,
+      endTime: session.endTime,
+      startAmount: session.startAmount,
+      
+      // Sales metrics
+      totalSales: salesAgg._sum.total || 0,
+      transactionCount: salesAgg._count.id || 0,
+      
+      // Cash movement summary
+      floatInAmount: floatIn._sum.amount || 0,
+      dropsAmount: drops._sum.amount || 0,
+      payoutsAmount: payouts._sum.amount || 0,
+      totalTransactions: transactionsAgg._sum.amount || 0,
+      
+      // Net calculation
+      netCashMovement: (floatIn._sum.amount || 0) - (drops._sum.amount || 0) - (payouts._sum.amount || 0)
+    };
+
+    res.json(result);
+  } catch (error) {
+    console.error('Error fetching session sales:', error);
+    res.status(500).json({ message: 'Error fetching session sales' });
   }
 };
 
@@ -76,10 +185,6 @@ export const endSession = async (req: Request, res: Response) => {
 
     const session = await getSessionRaw(userId);
     if (!session) return res.status(404).json({ message: 'No active session' });
-
-    // Calculate Expected
-    // Expected = Start + CashSales - Refunds(Cash) + FloatIn - Drop - Payout
-    // We need to query sales and refunds for this session time window
 
     const cashSales = await prisma.sale.aggregate({
         where: {
@@ -136,6 +241,20 @@ export const endSession = async (req: Request, res: Response) => {
         }
     });
 
+    // Emit real-time cash session events
+    try {
+      broadcastToBranch(session.branchId, 'cash:session_ended', {
+        sessionId: updated.id,
+        branchId: session.branchId,
+        cashierId: userId,
+        endAmount,
+        expectedAmount: expected,
+        endTime: updated.endTime
+      });
+    } catch (socketError) {
+      console.error('Failed to emit cash session events:', socketError);
+    }
+
     res.json(updated);
   } catch (error) {
      if (error instanceof z.ZodError) return res.status(400).json({ errors: error.errors });
@@ -158,6 +277,21 @@ export const addTransaction = async (req: Request, res: Response) => {
             ...data
         }
     });
+
+    // Emit real-time cash transaction events
+    try {
+      broadcastToBranch(session.branchId, 'cash:transaction', {
+        transactionId: tx.id,
+        sessionId: session.id,
+        branchId: session.branchId,
+        type: data.type,
+        amount: data.amount,
+        reason: data.reason,
+        createdAt: tx.createdAt
+      });
+    } catch (socketError) {
+      console.error('Failed to emit cash transaction events:', socketError);
+    }
 
     res.json(tx);
   } catch (error) {
