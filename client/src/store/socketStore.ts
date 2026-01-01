@@ -81,7 +81,21 @@ export const useSocketStore = create<SocketState>((set, get) => ({
         });
 
         newSocket.on('connect_error', (error: Error) => {
-          console.error('⚠️ WebSocket connection error:', error);
+          console.error('⚠️ WebSocket connection error:', error.message);
+          
+          // Handle authentication errors
+          if (error.message === 'Invalid authentication token' || 
+              error.message === 'Authentication token required' ||
+              error.message === 'xhr poll error') { // Sometimes explicit auth errors are masked in polling
+            console.log('Authentication failed, logging out...');
+            import('./authStore').then(({ useAuthStore }) => {
+              useAuthStore.getState().logout();
+              // Force reload to clear any stale state/sockets
+              window.location.href = '/login';
+            });
+            return;
+          }
+
           set({ 
             error: 'Failed to connect to server', 
             isConnecting: false
