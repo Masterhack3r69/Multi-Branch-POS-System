@@ -16,7 +16,7 @@ const updateProductSchema = z.object({
   active: z.boolean().optional(),
 });
 
-export const getProducts = async (req: Request, res: Response) => {
+export const getProducts = async (_req: Request, res: Response) => {
   try {
     const products = await prisma.product.findMany({
       include: { skus: true },

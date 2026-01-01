@@ -15,7 +15,7 @@ const updateBranchSchema = z.object({
   active: z.boolean().optional(),
 });
 
-export const getBranches = async (req: Request, res: Response) => {
+export const getBranches = async (_req: Request, res: Response) => {
   try {
     const branches = await prisma.branch.findMany();
     res.json(branches);

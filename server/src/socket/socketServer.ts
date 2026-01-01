@@ -1,10 +1,11 @@
 import { Server as SocketIOServer } from 'socket.io';
+import { Server as HttpServer } from 'http';
 import { authenticateSocket, AuthenticatedSocket } from './socketAuth';
 
 let io: SocketIOServer;
 const userSockets = new Map<string, string>(); // Map of userId to socketId
 
-export const initializeSocket = (server: any) => {
+export const initializeSocket = (server: HttpServer) => {
   io = new SocketIOServer(server, {
     cors: {
       origin: process.env.FRONTEND_URL || 'http://localhost:5173',
@@ -80,19 +81,19 @@ export const getSocketIO = () => {
 };
 
 // Utility functions for broadcasting events
-export const broadcastToBranch = (branchId: string, event: string, data: any) => {
+export const broadcastToBranch = <T>(branchId: string, event: string, data: T): void => {
   if (io) {
     io.to(`branch:${branchId}`).emit(event, data);
   }
 };
 
-export const broadcastToAdmin = (event: string, data: any) => {
+export const broadcastToAdmin = <T>(event: string, data: T): void => {
   if (io) {
     io.to('admin').emit(event, data);
   }
 };
 
-export const broadcastToUser = (userId: string, event: string, data: any) => {
+export const broadcastToUser = <T>(userId: string, event: string, data: T): void => {
   if (io) {
     io.to(`user:${userId}`).emit(event, data);
   }

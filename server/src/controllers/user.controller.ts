@@ -22,7 +22,7 @@ const updateUserSchema = z.object({
 // Controllers
 
 // GET /users
-export const getAllUsers = async (req: Request, res: Response) => {
+export const getAllUsers = async (_req: Request, res: Response) => {
   try {
     const users = await prisma.user.findMany({
       select: {
@@ -101,7 +101,13 @@ export const updateUser = async (req: Request, res: Response) => {
     const { id } = req.params;
     const data = updateUserSchema.parse(req.body);
 
-    const updateData: any = { ...data };
+    // Build update object with proper types
+    const updateData: {
+      name?: string;
+      role?: "ADMIN" | "MANAGER" | "CASHIER";
+      branchId?: string | null;
+      password?: string;
+    } = { ...data };
 
     // Handle empty string for branchId
     if (updateData.branchId === "") {

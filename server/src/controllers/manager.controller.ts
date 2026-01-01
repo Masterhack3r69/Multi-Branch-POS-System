@@ -102,7 +102,8 @@ export const getManagerDashboardStats = async (req: Request, res: Response) => {
       include: { product: { select: { name: true } } }
     });
 
-    const topProducts = topProductsToday.map(item => {
+    // Map product details for top products
+    const topProductsWithNames = topProductsToday.map(item => {
       const sku = productDetails.find(p => p.id === item.skuId);
       return {
         skuId: item.skuId,
@@ -157,7 +158,7 @@ export const getManagerDashboardStats = async (req: Request, res: Response) => {
         activeCashSessions
       },
       recentSales: recentSalesWithCashiers,
-      topProductsToday
+      topProductsToday: topProductsWithNames
     });
 
   } catch (error) {

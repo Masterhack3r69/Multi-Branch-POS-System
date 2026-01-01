@@ -1,12 +1,15 @@
 import { Request, Response, NextFunction } from 'express';
 import jwt from 'jsonwebtoken';
 
+// JWT payload type for type-safe token verification
+export interface JwtPayload {
+  id: string;
+  role: 'ADMIN' | 'MANAGER' | 'CASHIER';
+  branchId?: string | null;
+}
+
 export interface AuthRequest extends Request {
-  user?: {
-    id: string;
-    role: string;
-    branchId?: string | null;
-  };
+  user?: JwtPayload;
 }
 
 export const authenticate = async (req: AuthRequest, res: Response, next: NextFunction) => {
@@ -17,7 +20,7 @@ export const authenticate = async (req: AuthRequest, res: Response, next: NextFu
   }
 
   try {
-    const decoded = jwt.verify(token, process.env.JWT_SECRET as string) as any;
+    const decoded = jwt.verify(token, process.env.JWT_SECRET as string) as JwtPayload;
     req.user = decoded;
     next();
   } catch (error) {

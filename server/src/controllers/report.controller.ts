@@ -97,7 +97,7 @@ export const getInventoryReport = async (req: Request, res: Response) => {
   }
 };
 
-export const getDashboardStats = async (req: Request, res: Response) => {
+export const getDashboardStats = async (_req: Request, res: Response) => {
   try {
     const today = new Date();
     today.setHours(0, 0, 0, 0);
@@ -114,23 +114,8 @@ export const getDashboardStats = async (req: Request, res: Response) => {
     });
 
     // 2. Low Stock Count (Overall)
-    const lowStockCount = await prisma.stock.count({
-      where: {
-        qty: { lte: 10 }, // Simplification: using fixed threshold or check db logic if per-item threshold available?
-        // Actually, prisma count doesn't support comparing two columns (qty <= lowStockThreshold) directly in `where` easily.
-        // For MVP, we'll fetch all stocks and filter in memory or use a raw query.
-        // BUT, getInventoryReport did it in memory. Let's stick to memory for consistency/speed on small datasets,
-        // OR better: standard threshold for count query if field comparison is hard.
-        // Wait, schema has `lowStockThreshold Int @default(10)`.
-        // Prisma doesn't support `qty: { lte: prisma.stock.fields.lowStockThreshold }` yet.
-        // Let's use raw query for performance or in-memory.
-        // Given constraint, let's just fetch all like inventory report or use a fixed number if acceptable? 
-        // User asked for "Real data". I will reuse the logic from getInventoryReport but optimized if possible.
-        // Actually, let's just fetch all stocks. It's MVP.
-      }
-    });
-    
-    // Efficient Low Stock Count attempt (using JS filter is safer for now without raw query complexity issues)
+    // Note: We use allStocks with in-memory filter below for accurate per-item threshold comparison
+    // Prisma doesn't support comparing qty <= lowStockThreshold directly in where clause
     const allStocks = await prisma.stock.findMany({ select: { qty: true, lowStockThreshold: true } });
     const lowStock = allStocks.filter(s => s.qty <= s.lowStockThreshold).length;
 

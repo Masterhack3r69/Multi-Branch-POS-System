@@ -1,7 +1,7 @@
 import { Request, Response } from 'express';
 import { prisma } from '../utils/prisma';
 import { z } from 'zod';
-import { broadcastToBranch, broadcastToAdmin } from '../socket/socketServer';
+import { broadcastToBranch } from '../socket/socketServer';
 
 const startSessionSchema = z.object({
   branchId: z.string(),
@@ -186,16 +186,8 @@ export const endSession = async (req: Request, res: Response) => {
     const session = await getSessionRaw(userId);
     if (!session) return res.status(404).json({ message: 'No active session' });
 
-    const cashSales = await prisma.sale.aggregate({
-        where: {
-            cashierId: userId,
-            createdAt: { gte: session.startTime },
-            payments: { some: { method: 'CASH' } }
-        },
-        _sum: { total: true } // Be careful, if mixed payment, we need only cash part.
-        // For MVP, assuming single payment method or simple sum.
-        // Better: Query payments directly.
-    });
+    // Note: We use the payments aggregation below for accurate cash totals
+    // The sale.aggregate approach was replaced because it doesn't account for mixed payment methods
     
     // Correct way: Sum CASH payments
     const payments = await prisma.payment.aggregate({
